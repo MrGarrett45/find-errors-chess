@@ -1,0 +1,14 @@
+package main
+
+import (
+	"example/my-go-api/app"
+
+	"github.com/gin-gonic/gin"
+)
+
+func main() {
+	app.MustInitDB()
+	router := gin.Default()
+	router.GET("chessgames/:username", app.GetChessGames)
+	router.Run("localhost:8080")
+}
