@@ -12,5 +12,5 @@ ToDo:
 3. Add lichess support
 4. Add ability to isolate errors
 5. Frontend
-6. Add multithreading to backend analysis (further perfect)
-7. Make sure closing the db safely
+6. Add multithreading to backend analysis (further work to do)
+7. Make sure closing the db safely 
