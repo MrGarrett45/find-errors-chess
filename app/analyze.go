@@ -3,6 +3,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -22,12 +23,18 @@ func AnalyzePGN(pgn string, meta models.GameLite, eng *UCIEngine, cfg *config.Co
 
 	// Collect FEN snapshots of each position
 	var fens []models.PositionEval
-	for _, p := range g.Positions() {
+	for i, p := range g.Positions() {
+		if i >= cfg.Engine.NumMoves {
+			break
+		}
 		fens = append(fens, fenEvalFromPosition(p))
 	}
 
 	// Collect individual moves for easier debugging
 	for i, m := range g.Moves() {
+		if i >= cfg.Engine.NumMoves {
+			break
+		}
 		fens[i].Move = m.String()
 	}
 
@@ -79,4 +86,33 @@ func fenEvalFromPosition(pos *chess.Position) models.PositionEval {
 		SideToMove: side,
 		FEN:        string(fen),
 	}
+}
+
+// What we let our workers call to process games
+func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite) error {
+	fmt.Printf("\n=== Analyzing game: %s vs %s (%s) ===\n", cfg.User, g.Opponent, g.URL)
+
+	denormalizedPgn := g.PGN
+
+	tags := ParsePGNTags(denormalizedPgn)
+	pgn := NormalizeChessDotComPGN(denormalizedPgn)
+
+	meta := models.GameLite{
+		URL:         tags["Link"],
+		When:        GetUnixTimeStamp(tags["Date"], tags["StartTime"], tags["Timezone"]),
+		Color:       "white",
+		Opponent:    "demo",
+		Result:      tags["Result"],
+		PGN:         pgn,
+		TimeControl: tags["TimeControl"],
+	}
+
+	report, err := AnalyzePGN(meta.PGN, meta, eng, cfg)
+	if err != nil {
+		return err
+	}
+
+	b, _ := json.MarshalIndent(report, "", "  ")
+	fmt.Println(string(b))
+	return nil
 }

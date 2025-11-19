@@ -3,7 +3,9 @@ package app
 import (
 	"example/my-go-api/app/models"
 	"fmt"
+	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -146,4 +148,15 @@ func GetUnixTimeStamp(date string, timeStamp string, timeZone string) int64 {
 	}
 
 	return t.Unix()
+}
+
+func GetWorkerCount() int {
+	//default number of workers = number of cpus. Otherwise can be overwritten with WORKERS env var
+	n := runtime.NumCPU()
+	if v := os.Getenv("WORKERS"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			n = parsed
+		}
+	}
+	return n
 }

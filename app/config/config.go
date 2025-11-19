@@ -33,6 +33,7 @@ type EngineConfig struct {
 	MoveTime    int
 	DepthOrTime bool //true for depth, false for time
 	Depth       int
+	NumMoves    int //how many moves should the engine process
 }
 
 func LoadConfig() (*Config, error) {
@@ -41,14 +42,19 @@ func LoadConfig() (*Config, error) {
 		log.Fatalf("Error converting string to int: %v", err)
 	}
 
-	depth, err := strconv.Atoi(os.Getenv("ENGINE_DEPTH"))
+	numMoves, err := strconv.Atoi(os.Getenv("ENGINE_NUMBER_OF_MOVES"))
 	if err != nil {
-		log.Fatalf("Error parsing DEPTH_OR_TIME: %v", err)
+		log.Fatalf("Error converting string to int: %v", err)
 	}
 
-	depthOrTime, err := strconv.ParseBool(os.Getenv("DEPTH_OR_TIME"))
+	depth, err := strconv.Atoi(os.Getenv("ENGINE_DEPTH"))
 	if err != nil {
-		log.Fatalf("Error parsing DEPTH_OR_TIME: %v", err)
+		log.Fatalf("Error parsing ENGINE_DEPTH_OR_TIME: %v", err)
+	}
+
+	depthOrTime, err := strconv.ParseBool(os.Getenv("ENGINE_DEPTH_OR_TIME"))
+	if err != nil {
+		log.Fatalf("Error parsing ENGINE_DEPTH_OR_TIME: %v", err)
 	}
 
 	cfg := &Config{
@@ -68,6 +74,7 @@ func LoadConfig() (*Config, error) {
 			MoveTime:    moveTime,
 			Depth:       depth,
 			DepthOrTime: depthOrTime,
+			NumMoves:    numMoves,
 		},
 	}
 
