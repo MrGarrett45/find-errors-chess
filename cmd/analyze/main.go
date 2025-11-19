@@ -118,8 +118,8 @@ func main() {
 	defer cancel()
 
 	app.MustInitDB()
-	//load last 10 games
-	games, err := app.LoadGames(ctx, cfg.User, 10)
+	//load last x number of games
+	games, err := app.LoadGames(ctx, cfg.User, cfg.Engine.NumGames)
 	if err != nil {
 		log.Fatalf("loadGames: %v", err)
 	}
@@ -134,6 +134,7 @@ func main() {
 	fmt.Printf("Analyzing %d games with %d workers\n", len(games), numWorkers)
 
 	jobs := make(chan models.GameLite)
+	results := make(chan models.GameEval)
 	var wg sync.WaitGroup
 
 	// Start workers
@@ -151,8 +152,10 @@ func main() {
 			_ = eng.NewGame()
 
 			for g := range jobs {
-				if err := app.AnalyzeOneGame(cfg, eng, g); err != nil {
+				if report, err := app.AnalyzeOneGame(cfg, eng, g); err != nil {
 					log.Printf("worker %d: error analyzing game %s: %v", id, g.URL, err)
+				} else {
+					results <- report
 				}
 			}
 		}(i)
@@ -166,6 +169,19 @@ func main() {
 		}
 	}()
 
-	wg.Wait()
+	// Close results once ALL workers are done
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	var allResults []models.GameEval
+
+	for res := range results {
+		allResults = append(allResults, res)
+	}
+
+	fmt.Printf("Got %d successful results\n", len(allResults))
+
 	fmt.Printf("Took %s\n", time.Since(start))
 }

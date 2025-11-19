@@ -14,3 +14,4 @@ ToDo:
 5. Frontend
 6. Add multithreading to backend analysis (further work to do)
 7. Make sure closing the db safely 
+8. Switch from fmt to log

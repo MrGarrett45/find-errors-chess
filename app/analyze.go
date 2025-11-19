@@ -89,7 +89,7 @@ func fenEvalFromPosition(pos *chess.Position) models.PositionEval {
 }
 
 // What we let our workers call to process games
-func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite) error {
+func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite) (models.GameEval, error) {
 	fmt.Printf("\n=== Analyzing game: %s vs %s (%s) ===\n", cfg.User, g.Opponent, g.URL)
 
 	denormalizedPgn := g.PGN
@@ -109,10 +109,10 @@ func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite) error
 
 	report, err := AnalyzePGN(meta.PGN, meta, eng, cfg)
 	if err != nil {
-		return err
+		return models.GameEval{}, err
 	}
 
 	b, _ := json.MarshalIndent(report, "", "  ")
 	fmt.Println(string(b))
-	return nil
+	return report, nil
 }
