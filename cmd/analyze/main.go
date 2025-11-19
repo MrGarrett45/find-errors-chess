@@ -29,18 +29,18 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	app.MustInitDB()
-	games, err := app.LoadGames(ctx, "xpertwizard", 3) // last 3 games
+	games, err := app.LoadGames(ctx, cfg.User, 3) // last 3 games
 	if err != nil {
 		fmt.Printf("loadGames: %v", err)
 	}
 	if len(games) == 0 {
-		fmt.Printf("no games found for %s", "xpertwizard")
+		fmt.Printf("no games found for %s", cfg.User)
 		return
 	}
 
 	start := time.Now()
 	for _, g := range games {
-		fmt.Printf("\n=== Analyzing game: %s vs %s (%s) ===\n", "xpertwizard", g.Opponent, g.URL)
+		fmt.Printf("\n=== Analyzing game: %s vs %s (%s) ===\n", cfg.User, g.Opponent, g.URL)
 
 		denormalizedPgn := g.PGN
 
@@ -54,7 +54,7 @@ func main() {
 		}
 
 		// ~600ms per position so it’s quick
-		report, err := app.AnalyzePGN(meta.PGN, meta, eng)
+		report, err := app.AnalyzePGN(meta.PGN, meta, eng, cfg)
 		if err != nil {
 			panic(err)
 		}

@@ -7,12 +7,13 @@ import (
 	"strings"
 	"time"
 
+	"example/my-go-api/app/config"
 	"example/my-go-api/app/models"
 
 	"github.com/notnil/chess"
 )
 
-func AnalyzePGN(pgn string, meta models.GameLite, eng *UCIEngine) (models.GameEval, error) {
+func AnalyzePGN(pgn string, meta models.GameLite, eng *UCIEngine, cfg *config.Config) (models.GameEval, error) {
 	// Parse PGN into new game
 	g := chess.NewGame()
 	if err := g.UnmarshalText([]byte(pgn)); err != nil {
@@ -37,7 +38,7 @@ func AnalyzePGN(pgn string, meta models.GameLite, eng *UCIEngine) (models.GameEv
 	ctx := context.Background()
 	for i := range fens {
 		c2, cancel := context.WithTimeout(ctx, 2*time.Second)
-		score, _ := eng.EvalFEN(c2, fens[i].FEN, 500)
+		score, _ := eng.EvalFEN(c2, fens[i].FEN, cfg)
 		cancel()
 		fens[i].Score = score
 	}
