@@ -6,6 +6,7 @@ type PositionEval struct {
 	FEN        string   `json:"fen"`
 	Score      UCIScore `json:"score"`
 	Move       string
+	Ply        int
 }
 
 type GameEval struct {

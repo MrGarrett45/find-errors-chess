@@ -109,6 +109,7 @@ import (
 )
 
 func main() {
+	start := time.Now()
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
@@ -128,13 +129,11 @@ func main() {
 		return
 	}
 
-	start := time.Now()
-
 	numWorkers := app.GetWorkerCount()
 	fmt.Printf("Analyzing %d games with %d workers\n", len(games), numWorkers)
 
-	jobs := make(chan models.GameLite)
-	results := make(chan models.GameEval)
+	jobs := make(chan models.GameLite, len(games))
+	results := make(chan models.GameEval, len(games))
 	var wg sync.WaitGroup
 
 	// Start workers

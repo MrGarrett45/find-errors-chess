@@ -27,15 +27,22 @@ func AnalyzePGN(pgn string, meta models.GameLite, eng *UCIEngine, cfg *config.Co
 		if i >= cfg.Engine.NumMoves {
 			break
 		}
-		fens = append(fens, fenEvalFromPosition(p))
-	}
 
-	// Collect individual moves for easier debugging
-	for i, m := range g.Moves() {
-		if i >= cfg.Engine.NumMoves {
-			break
+		if i > 0 {
+			fenEval := fenEvalFromPosition(p)
+
+			// Assign move in SAN/UCN
+			if i < len(g.Moves()) {
+				fenEval.Move = g.Moves()[i].String()
+			}
+
+			// Assign move number in chess notation (1, 1, 2, 2, ...)
+			fenEval.MoveNumber = ((i - 1) / 2) + 1
+			fenEval.Ply = i
+
+			fens = append(fens, fenEval)
 		}
-		fens[i].Move = m.String()
+
 	}
 
 	// New game (lets the engine clear its internal state)
@@ -69,9 +76,11 @@ func AnalyzePGN(pgn string, meta models.GameLite, eng *UCIEngine, cfg *config.Co
 
 func fenEvalFromPosition(pos *chess.Position) models.PositionEval {
 	fen := pos.String()
-	side := "w"
+
+	//this is inverted for some reason
+	side := "b"
 	if pos.Turn() == chess.Black {
-		side = "b"
+		side = "w"
 	}
 	// Full move number is at the end of FEN; chess.Position doesn’t expose it directly,
 	// but notnil/chess puts it in pos.String(). We'll parse minimally:
