@@ -16,13 +16,6 @@ type GameLite struct {
 	Moves       []Move
 }
 
-type FENEval struct {
-	MoveNumber int      `json:"move_number"` // fullmove number from FEN
-	SideToMove string   `json:"side_to_move"`
-	FEN        string   `json:"fen"`
-	Score      UCIScore `json:"score"`
-}
-
 type Move struct {
 	Move       string
 	FenBefore  FENEval
@@ -30,4 +23,10 @@ type Move struct {
 	MoveNumber int
 	Ply        int
 	Color      string
+}
+type FENEval struct {
+	MoveNumber int      `json:"move_number"` // fullmove number from FEN
+	SideToMove string   `json:"side_to_move"`
+	FEN        string   `json:"fen"`
+	Score      UCIScore `json:"score"`
 }

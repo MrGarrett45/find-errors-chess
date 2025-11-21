@@ -9,7 +9,7 @@ import (
 	"example/my-go-api/app/config"
 	"example/my-go-api/app/models"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 var db *sql.DB
@@ -39,8 +39,6 @@ func MustInitDB() {
 		log.Fatalf("db.Ping: %v", err)
 	}
 
-	//"postgres://postgres:lTCXTLfzEnvvU8QOfpAb@lTCXTLfzEnvvU8QOfpAb@chess-db.crslkdnd8iac.us-east-1.rds.amazonaws.com:5432"
-	//"postgres://postgres:lTCXTLfzEnvvU8QOfpAb@chess-db.crslkdnd8iac.us-east-1.rds.amazonaws.com:5432"
 	log.Println("Connected to Postgres")
 	db = d
 }
@@ -50,29 +48,35 @@ func saveGames(ctx context.Context, username string, games []models.GameLite) er
 		return nil
 	}
 
-	// Wrap in a transaction so we either write all or none
+	// One transaction for all games
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO games (
-			username, url, when_unix, color, opponent, opponent_rating,
-			result, rated, time_class, time_control, pgn
-		)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-		ON CONFLICT (username, url) DO NOTHING
-	`)
+	// COPY into games table directly
+	stmt, err := tx.PrepareContext(ctx, pq.CopyIn(
+		"games",
+		"username",
+		"url",
+		"when_unix",
+		"color",
+		"opponent",
+		"opponent_rating",
+		"result",
+		"rated",
+		"time_class",
+		"time_control",
+		"pgn",
+	))
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
 	for _, g := range games {
-		_, err := stmt.ExecContext(
-			ctx,
+		_, err := stmt.Exec(
 			username,
 			g.URL,
 			g.When,
@@ -90,9 +94,15 @@ func saveGames(ctx context.Context, username string, games []models.GameLite) er
 		}
 	}
 
+	// Finish COPY stream
+	if _, err := stmt.Exec(); err != nil {
+		return err
+	}
+
 	if err := tx.Commit(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -147,67 +157,72 @@ func LoadGames(ctx context.Context, username string, limit int) ([]models.GameLi
 	return out, nil
 }
 
-func SaveMoves(ctx context.Context, cfg *config.Config, g models.GameLite) error {
-	if len(g.Moves) == 0 {
+func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite) error {
+	if len(games) == 0 {
 		return nil
 	}
 
-	// Wrap in a transaction so we either write all or none
+	// Begin one transaction for all games
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO moves (
-			game_id, ply, move_number, fen_before, fen_after, move_uci, played_by, eval_depth, eval_time,
-			eval_before_cp, eval_after_cp, eval_before_mate, eval_after_mate, centipawn_change, best_move_uci
-		)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-		ON CONFLICT (game_id, ply) DO NOTHING
-	`)
+	// Prepare COPY statement
+	stmt, err := tx.PrepareContext(ctx, pq.CopyIn(
+		"moves",
+		"game_id", "ply", "move_number", "fen_before", "fen_after",
+		"move_uci", "played_by",
+		"eval_depth", "eval_time",
+		"eval_before_cp", "eval_after_cp",
+		"eval_before_mate", "eval_after_mate",
+		"centipawn_change", "best_move_uci",
+	))
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	for _, e := range g.Moves {
-		// compute summed CP safely (or nil)
-		var summedCP *int
-		if e.FenBefore.Score.CP != nil && e.FenAfter.Score.CP != nil {
+	// Stream COPY rows
+	for _, g := range games {
+		for _, e := range g.Moves {
 
-			v := *e.FenBefore.Score.CP + *e.FenAfter.Score.CP
-			summedCP = &v
-		} else {
-			// either score/CP is nil; store NULL in DB
-			summedCP = nil
-		}
-		_, err := stmt.ExecContext(
-			ctx,
-			g.GameId,
-			e.Ply,
-			e.MoveNumber,
-			e.FenBefore.FEN,
-			e.FenAfter.FEN,
-			e.Move,
-			e.Color,
-			cfg.Engine.Depth,
-			cfg.Engine.MoveTime,
-			e.FenBefore.Score.CP,
-			e.FenAfter.Score.CP,
-			e.FenBefore.Score.Mate,
-			e.FenAfter.Score.Mate,
-			summedCP,
-			e.FenBefore.Score.Best,
-		)
-		if err != nil {
-			return err
+			// safe summed CP
+			var summedCP *int
+			if e.FenBefore.Score.CP != nil && e.FenAfter.Score.CP != nil {
+				v := *e.FenBefore.Score.CP + *e.FenAfter.Score.CP
+				summedCP = &v
+			}
+
+			_, err := stmt.Exec(
+				g.GameId,
+				e.Ply,
+				e.MoveNumber,
+				e.FenBefore.FEN,
+				e.FenAfter.FEN,
+				e.Move,
+				e.Color,
+				cfg.Engine.Depth,
+				cfg.Engine.MoveTime,
+				e.FenBefore.Score.CP,
+				e.FenAfter.Score.CP,
+				e.FenBefore.Score.Mate,
+				e.FenAfter.Score.Mate,
+				summedCP,
+				e.FenBefore.Score.Best,
+			)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	// Close COPY stream
+	if _, err := stmt.Exec(); err != nil {
 		return err
 	}
-	return nil
+
+	// Commit transaction
+	return tx.Commit()
 }

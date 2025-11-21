@@ -176,14 +176,16 @@ func main() {
 
 	var allResults []models.GameLite
 
-	ctx2, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
 	for res := range results {
 		allResults = append(allResults, res)
-		err = app.SaveMoves(ctx2, cfg, res)
-		if err != nil {
-			log.Fatalf("failed to save moves: %v", err)
-		}
+	}
+
+	ctx2, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	err = app.SaveMoves(ctx2, cfg, allResults)
+	if err != nil {
+		log.Fatalf("failed to save moves: %v", err)
 	}
 
 	fmt.Printf("Got %d successful results\n", len(allResults))
