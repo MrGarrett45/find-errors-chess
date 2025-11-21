@@ -133,7 +133,7 @@ func main() {
 	fmt.Printf("Analyzing %d games with %d workers\n", len(games), numWorkers)
 
 	jobs := make(chan models.GameLite, len(games))
-	results := make(chan models.GameEval, len(games))
+	results := make(chan models.GameLite, len(games))
 	var wg sync.WaitGroup
 
 	// Start workers
@@ -174,10 +174,16 @@ func main() {
 		close(results)
 	}()
 
-	var allResults []models.GameEval
+	var allResults []models.GameLite
 
+	ctx2, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
 	for res := range results {
 		allResults = append(allResults, res)
+		err = app.SaveMoves(ctx2, cfg, res)
+		if err != nil {
+			log.Fatalf("failed to save moves: %v", err)
+		}
 	}
 
 	fmt.Printf("Got %d successful results\n", len(allResults))

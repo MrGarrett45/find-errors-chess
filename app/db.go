@@ -100,6 +100,7 @@ func saveGames(ctx context.Context, username string, games []models.GameLite) er
 func LoadGames(ctx context.Context, username string, limit int) ([]models.GameLite, error) {
 	rows, err := db.QueryContext(ctx, `
 		SELECT
+			id,
 			url,
 			when_unix,
 			color,
@@ -124,6 +125,7 @@ func LoadGames(ctx context.Context, username string, limit int) ([]models.GameLi
 	for rows.Next() {
 		var g models.GameLite
 		if err := rows.Scan(
+			&g.GameId,
 			&g.URL,
 			&g.When,
 			&g.Color,
@@ -143,4 +145,69 @@ func LoadGames(ctx context.Context, username string, limit int) ([]models.GameLi
 		return nil, err
 	}
 	return out, nil
+}
+
+func SaveMoves(ctx context.Context, cfg *config.Config, g models.GameLite) error {
+	if len(g.Moves) == 0 {
+		return nil
+	}
+
+	// Wrap in a transaction so we either write all or none
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO moves (
+			game_id, ply, move_number, fen_before, fen_after, move_uci, played_by, eval_depth, eval_time,
+			eval_before_cp, eval_after_cp, eval_before_mate, eval_after_mate, centipawn_change, best_move_uci
+		)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+		ON CONFLICT (game_id, ply) DO NOTHING
+	`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, e := range g.Moves {
+		// compute summed CP safely (or nil)
+		var summedCP *int
+		if e.FenBefore.Score.CP != nil && e.FenAfter.Score.CP != nil {
+
+			v := *e.FenBefore.Score.CP + *e.FenAfter.Score.CP
+			summedCP = &v
+		} else {
+			// either score/CP is nil; store NULL in DB
+			summedCP = nil
+		}
+		_, err := stmt.ExecContext(
+			ctx,
+			g.GameId,
+			e.Ply,
+			e.MoveNumber,
+			e.FenBefore.FEN,
+			e.FenAfter.FEN,
+			e.Move,
+			e.Color,
+			cfg.Engine.Depth,
+			cfg.Engine.MoveTime,
+			e.FenBefore.Score.CP,
+			e.FenAfter.Score.CP,
+			e.FenBefore.Score.Mate,
+			e.FenAfter.Score.Mate,
+			summedCP,
+			e.FenBefore.Score.Best,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
 }

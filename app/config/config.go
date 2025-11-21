@@ -14,11 +14,16 @@ type Config struct {
 	DB     PostgresConfig
 	User   string
 	Engine EngineConfig
+	Http   HTTPConfig
 }
 
 type LogConfig struct {
 	Style string
 	Level string
+}
+
+type HTTPConfig struct {
+	NumGames int
 }
 
 type PostgresConfig struct {
@@ -58,6 +63,11 @@ func LoadConfig() (*Config, error) {
 		log.Fatalf("Error parsing ENGINE_DEPTH_OR_TIME: %v", err)
 	}
 
+	httpNumGames, err := strconv.Atoi(os.Getenv("HTTP_NUMBER_OF_GAMES"))
+	if err != nil {
+		log.Fatalf("Error parsing HTTP_NUMBER_OF_GAMES: %v", err)
+	}
+
 	depthOrTime, err := strconv.ParseBool(os.Getenv("ENGINE_DEPTH_OR_TIME"))
 	if err != nil {
 		log.Fatalf("Error parsing ENGINE_DEPTH_OR_TIME: %v", err)
@@ -82,6 +92,9 @@ func LoadConfig() (*Config, error) {
 			DepthOrTime: depthOrTime,
 			NumMoves:    numMoves,
 			NumGames:    numGames,
+		},
+		Http: HTTPConfig{
+			NumGames: httpNumGames,
 		},
 	}
 

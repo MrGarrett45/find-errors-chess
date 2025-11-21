@@ -160,3 +160,7 @@ func GetWorkerCount() int {
 	}
 	return n
 }
+
+func IsEven(number int) bool {
+	return number%2 == 0
+}

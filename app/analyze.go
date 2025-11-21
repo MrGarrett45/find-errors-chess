@@ -14,34 +14,22 @@ import (
 	"github.com/notnil/chess"
 )
 
-func AnalyzePGN(pgn string, meta models.GameLite, eng *UCIEngine, cfg *config.Config) (models.GameEval, error) {
+func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config) ([]models.Move, error) {
 	// Parse PGN into new game
 	g := chess.NewGame()
-	if err := g.UnmarshalText([]byte(pgn)); err != nil {
-		return models.GameEval{}, err
+	if err := g.UnmarshalText([]byte(meta.PGN)); err != nil {
+		return []models.Move{}, err
 	}
 
 	// Collect FEN snapshots of each position
-	var fens []models.PositionEval
+	var fens []models.FENEval
 	for i, p := range g.Positions() {
 		if i >= cfg.Engine.NumMoves {
 			break
 		}
+		fenEval := fenInfoFromPosition(p)
 
-		if i > 0 {
-			fenEval := fenEvalFromPosition(p)
-
-			// Assign move in SAN/UCN
-			if i < len(g.Moves()) {
-				fenEval.Move = g.Moves()[i].String()
-			}
-
-			// Assign move number in chess notation (1, 1, 2, 2, ...)
-			fenEval.MoveNumber = ((i - 1) / 2) + 1
-			fenEval.Ply = i
-
-			fens = append(fens, fenEval)
-		}
+		fens = append(fens, fenEval)
 
 	}
 
@@ -57,30 +45,39 @@ func AnalyzePGN(pgn string, meta models.GameLite, eng *UCIEngine, cfg *config.Co
 		fens[i].Score = score
 	}
 
-	// Final summary = final position eval if available
-	summary := models.UCIScore{}
-	if len(fens) > 0 {
-		summary = fens[len(fens)-1].Score
+	var moves []models.Move
+	for i, m := range g.Moves() {
+		if i >= cfg.Engine.NumMoves {
+			break
+		}
+		color := "w"
+		if !IsEven(i) {
+			color = "b"
+		}
+
+		moveNumber := (i / 2) + 1
+
+		//make sure fenAfter exists for any given position before using it
+		var fenAfter models.FENEval
+		if i+1 < len(fens) {
+			fenAfter = fens[i+1]
+		} else {
+			fenAfter = models.FENEval{}
+		}
+
+		moves = append(moves, models.Move{Move: m.String(), FenBefore: fens[i], FenAfter: fenAfter, MoveNumber: moveNumber, Ply: i + 1, Color: color})
 	}
 
-	return models.GameEval{
-		URL:      meta.URL,
-		When:     meta.When,
-		Color:    meta.Color,
-		Opponent: meta.Opponent,
-		Result:   meta.Result,
-		Evals:    fens,
-		Summary:  summary,
-	}, nil
+	return moves, nil
 }
 
-func fenEvalFromPosition(pos *chess.Position) models.PositionEval {
+func fenInfoFromPosition(pos *chess.Position) models.FENEval {
 	fen := pos.String()
 
 	//this is inverted for some reason
-	side := "b"
+	side := "w"
 	if pos.Turn() == chess.Black {
-		side = "w"
+		side = "b"
 	}
 	// Full move number is at the end of FEN; chess.Position doesn’t expose it directly,
 	// but notnil/chess puts it in pos.String(). We'll parse minimally:
@@ -90,7 +87,7 @@ func fenEvalFromPosition(pos *chess.Position) models.PositionEval {
 	if len(parts) >= 6 {
 		fmt.Sscanf(parts[5], "%d", &moveNum)
 	}
-	return models.PositionEval{
+	return models.FENEval{
 		MoveNumber: moveNum,
 		SideToMove: side,
 		FEN:        string(fen),
@@ -98,30 +95,21 @@ func fenEvalFromPosition(pos *chess.Position) models.PositionEval {
 }
 
 // What we let our workers call to process games
-func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite) (models.GameEval, error) {
+func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite) (models.GameLite, error) {
 	fmt.Printf("\n=== Analyzing game: %s vs %s (%s) ===\n", cfg.User, g.Opponent, g.URL)
 
-	denormalizedPgn := g.PGN
+	//tags := ParsePGNTags(g.PGN)
+	g.PGN = NormalizeChessDotComPGN(g.PGN)
 
-	tags := ParsePGNTags(denormalizedPgn)
-	pgn := NormalizeChessDotComPGN(denormalizedPgn)
-
-	meta := models.GameLite{
-		URL:         tags["Link"],
-		When:        GetUnixTimeStamp(tags["Date"], tags["StartTime"], tags["Timezone"]),
-		Color:       "white",
-		Opponent:    "demo",
-		Result:      tags["Result"],
-		PGN:         pgn,
-		TimeControl: tags["TimeControl"],
-	}
-
-	report, err := AnalyzePGN(meta.PGN, meta, eng, cfg)
+	moves, err := AnalyzePGN(g, eng, cfg)
 	if err != nil {
-		return models.GameEval{}, err
+		return models.GameLite{}, err
 	}
 
-	b, _ := json.MarshalIndent(report, "", "  ")
+	g.Moves = moves
+
+	b, _ := json.MarshalIndent(g, "", "  ")
 	fmt.Println(string(b))
-	return report, nil
+
+	return g, nil
 }
