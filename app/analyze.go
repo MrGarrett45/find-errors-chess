@@ -14,6 +14,12 @@ import (
 	"github.com/notnil/chess"
 )
 
+const (
+	InaccuracyThreshold = 50  // 0.50 pawns
+	MistakeThreshold    = 100 // 1.00 pawns
+	BlunderThreshold    = 200 // 2.00 pawns
+)
+
 func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config) ([]models.Move, error) {
 	// Parse PGN into new game
 	g := chess.NewGame()
@@ -65,7 +71,8 @@ func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config) ([]mod
 			fenAfter = models.FENEval{}
 		}
 
-		moves = append(moves, models.Move{Move: m.String(), FenBefore: fens[i], FenAfter: fenAfter, MoveNumber: moveNumber, Ply: i + 1, Color: color})
+		moveAnalysis := GetMoveAnalysis(color, fens[i], fenAfter)
+		moves = append(moves, models.Move{Move: m.String(), FenBefore: fens[i], FenAfter: fenAfter, MoveNumber: moveNumber, Ply: i + 1, Color: color, Analysis: moveAnalysis})
 	}
 
 	return moves, nil
@@ -112,4 +119,55 @@ func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite) (mode
 	fmt.Println(string(b))
 
 	return g, nil
+}
+
+func GetMoveAnalysis(color string, before, after models.FENEval) models.MoveAnalysis {
+	res := models.MoveAnalysis{}
+
+	// If no CP eval available or we hit a forced mate line, skip classification for now.
+	if before.Score.CP == nil || after.Score.CP == nil {
+		return res
+	}
+	if before.Score.Mate != nil || after.Score.Mate != nil {
+		return res
+	}
+
+	// --- 1) Normalize evals to White's POV ---
+	cpBefore := *before.Score.CP
+	if before.SideToMove == "b" {
+		cpBefore = -cpBefore
+	}
+
+	cpAfter := *after.Score.CP
+	if after.SideToMove == "b" {
+		cpAfter = -cpAfter
+	}
+
+	// --- 2) Compute eval change from mover's POV ---
+	var delta int
+	if color == "w" {
+		// White moved → if cpAfter < cpBefore, move was bad for White
+		delta = cpAfter - cpBefore
+	} else {
+		// Black moved → good moves DECREASE cpAfter (because good for Black = bad for White)
+		delta = cpBefore - cpAfter
+	}
+
+	// If negative, the mover lost good-ness.
+	loss := 0
+	if delta < 0 {
+		loss = -delta
+	}
+	res.CPChange = loss
+
+	// --- 3) Classify ---
+	if loss >= BlunderThreshold {
+		res.Is_Blunder = true
+	} else if loss >= MistakeThreshold {
+		res.Is_Mistake = true
+	} else if loss >= InaccuracyThreshold {
+		res.Is_Innacuracy = true
+	}
+
+	return res
 }

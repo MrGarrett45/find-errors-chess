@@ -88,7 +88,7 @@ func GetChessGames(c *gin.Context) {
 		}
 	}
 
-	if err := saveGames(ctx, username, out[0:100]); err != nil {
+	if err := saveGames(ctx, username, out[0:1000]); err != nil {
 		// For now, just log – you can upgrade this to proper logging later
 		fmt.Printf("saveGames failed for %s: %v", username, err)
 	}

@@ -48,16 +48,36 @@ func saveGames(ctx context.Context, username string, games []models.GameLite) er
 		return nil
 	}
 
-	// One transaction for all games
+	// One transaction for everything
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	// COPY into games table directly
+	// 1) Temp staging table
+	_, err = tx.ExecContext(ctx, `
+		CREATE TEMP TABLE tmp_games (
+			username         TEXT,
+			url              TEXT,
+			when_unix        BIGINT,
+			color            TEXT,
+			opponent         TEXT,
+			opponent_rating  INT,
+			result           TEXT,
+			rated            BOOLEAN,
+			time_class       TEXT,
+			time_control     TEXT,
+			pgn              TEXT
+		) ON COMMIT DROP;
+	`)
+	if err != nil {
+		return err
+	}
+
+	// 2) COPY into tmp_games
 	stmt, err := tx.PrepareContext(ctx, pq.CopyIn(
-		"games",
+		"tmp_games",
 		"username",
 		"url",
 		"when_unix",
@@ -73,10 +93,9 @@ func saveGames(ctx context.Context, username string, games []models.GameLite) er
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
 
 	for _, g := range games {
-		_, err := stmt.Exec(
+		if _, err := stmt.Exec(
 			username,
 			g.URL,
 			g.When,
@@ -88,22 +107,55 @@ func saveGames(ctx context.Context, username string, games []models.GameLite) er
 			g.TimeClass,
 			g.TimeControl,
 			g.PGN,
-		)
-		if err != nil {
+		); err != nil {
 			return err
 		}
 	}
 
-	// Finish COPY stream
+	// finish COPY
 	if _, err := stmt.Exec(); err != nil {
 		return err
 	}
-
-	if err := tx.Commit(); err != nil {
+	if err := stmt.Close(); err != nil {
 		return err
 	}
 
-	return nil
+	// 3) Insert into real table with conflict handling
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO games (
+			username,
+			url,
+			when_unix,
+			color,
+			opponent,
+			opponent_rating,
+			result,
+			rated,
+			time_class,
+			time_control,
+			pgn
+		)
+		SELECT
+			username,
+			url,
+			when_unix,
+			color,
+			opponent,
+			opponent_rating,
+			result,
+			rated,
+			time_class,
+			time_control,
+			pgn
+		FROM tmp_games
+		ON CONFLICT (username, url) DO NOTHING;
+	`)
+	if err != nil {
+		return err
+	}
+
+	// 4) Commit
+	return tx.Commit()
 }
 
 // loadGames reads the last N games for a username from the 'games' table
@@ -158,44 +210,56 @@ func LoadGames(ctx context.Context, username string, limit int) ([]models.GameLi
 }
 
 func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite) error {
-	if len(games) == 0 {
-		return nil
-	}
-
-	// Begin one transaction for all games
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	// Prepare COPY statement
+	// 1) Temp staging table
+	_, err = tx.ExecContext(ctx, `
+		CREATE TEMP TABLE tmp_moves (
+			game_id           BIGINT,
+			ply               INT,
+			move_number       INT,
+			fen_before		  TEXT,
+			fen_after		  TEXT,
+			move_uci          TEXT,
+			played_by             CHAR(1),
+			eval_before_cp       INT,
+			eval_after_cp     INT,
+			eval_before_mate         INT,
+			eval_after_mate INT,
+			eval_depth        INT,
+			eval_time      INT,
+			centipawn_change INT,
+			best_move_uci   TEXT,
+			is_inaccuracy BOOLEAN,
+			is_mistake BOOLEAN,
+			is_blunder BOOLEAN
+		) ON COMMIT DROP;
+	`)
+	if err != nil {
+		return err
+	}
+
+	// 2) COPY into tmp_moves
 	stmt, err := tx.PrepareContext(ctx, pq.CopyIn(
-		"moves",
+		"tmp_moves",
 		"game_id", "ply", "move_number", "fen_before", "fen_after",
 		"move_uci", "played_by",
 		"eval_depth", "eval_time",
 		"eval_before_cp", "eval_after_cp",
 		"eval_before_mate", "eval_after_mate",
-		"centipawn_change", "best_move_uci",
+		"centipawn_change", "best_move_uci", "is_inaccuracy", "is_mistake", "is_blunder",
 	))
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
 
-	// Stream COPY rows
 	for _, g := range games {
 		for _, e := range g.Moves {
-
-			// safe summed CP
-			var summedCP *int
-			if e.FenBefore.Score.CP != nil && e.FenAfter.Score.CP != nil {
-				v := *e.FenBefore.Score.CP + *e.FenAfter.Score.CP
-				summedCP = &v
-			}
-
-			_, err := stmt.Exec(
+			if _, err := stmt.Exec(
 				g.GameId,
 				e.Ply,
 				e.MoveNumber,
@@ -209,20 +273,41 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 				e.FenAfter.Score.CP,
 				e.FenBefore.Score.Mate,
 				e.FenAfter.Score.Mate,
-				summedCP,
+				e.Analysis.CPChange,
 				e.FenBefore.Score.Best,
-			)
-			if err != nil {
+				e.Analysis.Is_Innacuracy,
+				e.Analysis.Is_Mistake,
+				e.Analysis.Is_Blunder,
+			); err != nil {
 				return err
 			}
 		}
 	}
 
-	// Close COPY stream
 	if _, err := stmt.Exec(); err != nil {
 		return err
 	}
+	stmt.Close()
 
-	// Commit transaction
+	// 3) Upsert from tmp_moves into moves
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO moves (
+			game_id, ply, move_number, fen_before,
+			fen_after, move_uci, played_by,
+			eval_depth, eval_time, eval_before_cp,
+			eval_after_cp, eval_before_mate, eval_after_mate, centipawn_change, best_move_uci, is_inaccuracy, is_mistake, is_blunder
+		)
+		SELECT
+			game_id, ply, move_number, fen_before,
+			fen_after, move_uci, played_by,
+			eval_depth, eval_time, eval_before_cp,
+			eval_after_cp, eval_before_mate, eval_after_mate, centipawn_change, best_move_uci, is_inaccuracy, is_mistake, is_blunder
+		FROM tmp_moves
+		ON CONFLICT (game_id, ply) DO NOTHING;
+	`)
+	if err != nil {
+		return err
+	}
+
 	return tx.Commit()
 }

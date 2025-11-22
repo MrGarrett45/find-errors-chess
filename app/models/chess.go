@@ -23,10 +23,18 @@ type Move struct {
 	MoveNumber int
 	Ply        int
 	Color      string
+	Analysis   MoveAnalysis
 }
 type FENEval struct {
 	MoveNumber int      `json:"move_number"` // fullmove number from FEN
 	SideToMove string   `json:"side_to_move"`
 	FEN        string   `json:"fen"`
 	Score      UCIScore `json:"score"`
+}
+
+type MoveAnalysis struct {
+	CPChange      int
+	Is_Innacuracy bool
+	Is_Mistake    bool
+	Is_Blunder    bool
 }
