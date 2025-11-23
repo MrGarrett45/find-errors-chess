@@ -112,7 +112,6 @@ func fenInfoFromPosition(pos *chess.Position) models.FENEval {
 func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite) (models.GameLite, error) {
 	log.Printf("Analyzing game: %s vs %s (%s)", cfg.User, g.Opponent, g.URL)
 
-	//tags := ParsePGNTags(g.PGN)
 	g.PGN = NormalizeChessDotComPGN(g.PGN)
 
 	moves, err := AnalyzePGN(g, eng, cfg)

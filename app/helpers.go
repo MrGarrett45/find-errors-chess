@@ -72,25 +72,6 @@ func parsePositiveInt(s string) (int, error) {
 	return n, nil
 }
 
-// ParsePGNTags returns all bracketed tag pairs as a map.
-// Works for Chess.com PGNs with headers, clocks/comments, etc.
-func ParsePGNTags(pgn string) map[string]string {
-	// If the PGN came from JSON with "\n" escapes, turn them into real newlines
-	if strings.Contains(pgn, `\n`) && !strings.Contains(pgn, "\n") {
-		pgn = strings.ReplaceAll(pgn, `\n`, "\n")
-	}
-
-	// Matches lines like: [White "xpertwizard"]
-	re := regexp.MustCompile(`(?m)^\[([A-Za-z0-9_]+)\s+"([^"]*)"\]\s*$`)
-	tags := make(map[string]string)
-
-	for _, m := range re.FindAllStringSubmatch(pgn, -1) {
-		// m[1] is the key, m[2] is the value
-		tags[m[1]] = m[2]
-	}
-	return tags
-}
-
 // BuildTagSummary maps the raw tag map into a typed summary and optionally
 // computes POV info for povUser (case-insensitive). If povUser == "" it skips POV.
 func BuildTagSummary(tags map[string]string, povUser string) TagSummary {
