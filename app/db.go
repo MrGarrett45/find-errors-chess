@@ -233,7 +233,7 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 			fen_before		  TEXT,
 			fen_after		  TEXT,
 			move_uci          TEXT,
-			played_by             CHAR(1),
+			color             CHAR(1),
 			eval_before_cp       INT,
 			eval_after_cp     INT,
 			eval_before_mate         INT,
@@ -246,7 +246,8 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 			is_mistake BOOLEAN,
 			is_blunder BOOLEAN,
 			is_suboptimal BOOLEAN,
-			normalized_fen_before TEXT
+			normalized_fen_before TEXT,
+			played_by TEXT
 		) ON COMMIT DROP;
 	`)
 	if err != nil {
@@ -257,12 +258,12 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 	stmt, err := tx.PrepareContext(ctx, pq.CopyIn(
 		"tmp_moves",
 		"game_id", "ply", "move_number", "fen_before", "fen_after",
-		"move_uci", "played_by",
+		"move_uci", "color",
 		"eval_depth", "eval_time",
 		"eval_before_cp", "eval_after_cp",
 		"eval_before_mate", "eval_after_mate",
 		"centipawn_change", "best_move_uci", "is_inaccuracy", "is_mistake", "is_blunder", "is_suboptimal",
-		"normalized_fen_before",
+		"normalized_fen_before", "played_by",
 	))
 	if err != nil {
 		return err
@@ -293,6 +294,7 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 				e.Analysis.Is_Blunder,
 				e.Analysis.Is_Suboptimal,
 				normalizedFen,
+				e.PlayedBy,
 			); err != nil {
 				return err
 			}
@@ -308,17 +310,17 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO moves (
 			game_id, ply, move_number, fen_before,
-			fen_after, move_uci, played_by,
+			fen_after, move_uci, color,
 			eval_depth, eval_time, eval_before_cp,
 			eval_after_cp, eval_before_mate, eval_after_mate, centipawn_change, best_move_uci, is_inaccuracy, is_mistake, is_blunder,
-			is_suboptimal, normalized_fen_before
+			is_suboptimal, normalized_fen_before, played_by
 		)
 		SELECT
 			game_id, ply, move_number, fen_before,
-			fen_after, move_uci, played_by,
+			fen_after, move_uci, color,
 			eval_depth, eval_time, eval_before_cp,
 			eval_after_cp, eval_before_mate, eval_after_mate, centipawn_change, best_move_uci, is_inaccuracy, is_mistake, is_blunder,
-			is_suboptimal, normalized_fen_before
+			is_suboptimal, normalized_fen_before, played_by
 		FROM tmp_moves
 		ON CONFLICT (game_id, ply) DO NOTHING;
 	`)

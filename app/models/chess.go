@@ -18,11 +18,12 @@ type GameLite struct {
 
 type Move struct {
 	Move       string
-	FenBefore  FENEval
-	FenAfter   FENEval
+	PlayedBy   string
 	MoveNumber int
 	Ply        int
 	Color      string
+	FenBefore  FENEval
+	FenAfter   FENEval
 	Analysis   MoveAnalysis
 }
 type FENEval struct {

@@ -63,6 +63,11 @@ func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config) ([]mod
 			color = "b"
 		}
 
+		playedBy := cfg.User
+		if string(meta.Color[0]) != color {
+			playedBy = meta.Opponent
+		}
+
 		moveNumber := (i / 2) + 1
 
 		//make sure fenAfter exists for any given position before using it
@@ -74,7 +79,7 @@ func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config) ([]mod
 		}
 
 		moveAnalysis := GetMoveAnalysis(color, fens[i], fenAfter)
-		moves = append(moves, models.Move{Move: m.String(), FenBefore: fens[i], FenAfter: fenAfter, MoveNumber: moveNumber, Ply: i + 1, Color: color, Analysis: moveAnalysis})
+		moves = append(moves, models.Move{Move: m.String(), PlayedBy: playedBy, FenBefore: fens[i], FenAfter: fenAfter, MoveNumber: moveNumber, Ply: i + 1, Color: color, Analysis: moveAnalysis})
 	}
 
 	return moves, nil
