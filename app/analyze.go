@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -104,7 +105,7 @@ func fenInfoFromPosition(pos *chess.Position) models.FENEval {
 
 // What we let our workers call to process games
 func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite) (models.GameLite, error) {
-	fmt.Printf("\n=== Analyzing game: %s vs %s (%s) ===\n", cfg.User, g.Opponent, g.URL)
+	log.Printf("Analyzing game: %s vs %s (%s)", cfg.User, g.Opponent, g.URL)
 
 	//tags := ParsePGNTags(g.PGN)
 	g.PGN = NormalizeChessDotComPGN(g.PGN)
@@ -117,7 +118,7 @@ func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite) (mode
 	g.Moves = moves
 
 	b, _ := json.MarshalIndent(g, "", "  ")
-	fmt.Println(string(b))
+	log.Printf("Analysis result: %s", string(b))
 
 	return g, nil
 }

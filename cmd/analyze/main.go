@@ -5,7 +5,6 @@ import (
 	"example/my-go-api/app"
 	"example/my-go-api/app/config"
 	"example/my-go-api/app/models"
-	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -28,12 +27,12 @@ func main() {
 		log.Fatalf("loadGames: %v", err)
 	}
 	if len(games) == 0 {
-		fmt.Printf("no games found for %s\n", cfg.User)
+		log.Printf("no games found for %s", cfg.User)
 		return
 	}
 
 	numWorkers := app.GetWorkerCount()
-	fmt.Printf("Analyzing %d games with %d workers\n", len(games), numWorkers)
+	log.Printf("Analyzing %d games with %d workers", len(games), numWorkers)
 
 	jobs := make(chan models.GameLite, len(games))
 	results := make(chan models.GameLite, len(games))
@@ -91,7 +90,6 @@ func main() {
 		log.Fatalf("failed to save moves: %v", err)
 	}
 
-	fmt.Printf("Got %d successful results\n", len(allResults))
-
-	fmt.Printf("Took %s\n", time.Since(start))
+	log.Printf("Got %d successful results", len(allResults))
+	log.Printf("Took %s", time.Since(start))
 }
