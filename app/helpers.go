@@ -164,3 +164,30 @@ func GetWorkerCount() int {
 func IsEven(number int) bool {
 	return number%2 == 0
 }
+
+// NormalizeFEN strips move counters and keeps only the structural position:
+// <pieces> <side> <castling> <en-passant>
+func NormalizeFEN(fen string) string {
+	parts := strings.Split(fen, " ")
+	if len(parts) < 4 {
+		// malformed FEN, return original
+		return fen
+	}
+
+	pieces := parts[0]
+	side := parts[1]
+	castling := parts[2]
+	ep := parts[3]
+
+	// OPTIONAL: normalize empty castling field "-" to something consistent
+	if castling == "" {
+		castling = "-"
+	}
+
+	// OPTIONAL: you can normalize "no EP square" as "-"
+	if ep == "" {
+		ep = "-"
+	}
+
+	return pieces + " " + side + " " + castling + " " + ep
+}

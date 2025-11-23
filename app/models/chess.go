@@ -34,6 +34,7 @@ type FENEval struct {
 
 type MoveAnalysis struct {
 	CPChange      int
+	Is_Suboptimal bool
 	Is_Innacuracy bool
 	Is_Mistake    bool
 	Is_Blunder    bool

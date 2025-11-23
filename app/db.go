@@ -44,6 +44,10 @@ func MustInitDB() {
 }
 
 func saveGames(ctx context.Context, username string, games []models.GameLite) error {
+	if db == nil {
+		// Allow test runs without a backing DB.
+		return nil
+	}
 	if len(games) == 0 {
 		return nil
 	}
@@ -210,6 +214,10 @@ func LoadGames(ctx context.Context, username string, limit int) ([]models.GameLi
 }
 
 func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite) error {
+	if db == nil {
+		// Allow test runs without a backing DB.
+		return nil
+	}
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return err
@@ -236,7 +244,9 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 			best_move_uci   TEXT,
 			is_inaccuracy BOOLEAN,
 			is_mistake BOOLEAN,
-			is_blunder BOOLEAN
+			is_blunder BOOLEAN,
+			is_suboptimal BOOLEAN,
+			normalized_fen_before TEXT
 		) ON COMMIT DROP;
 	`)
 	if err != nil {
@@ -251,7 +261,8 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 		"eval_depth", "eval_time",
 		"eval_before_cp", "eval_after_cp",
 		"eval_before_mate", "eval_after_mate",
-		"centipawn_change", "best_move_uci", "is_inaccuracy", "is_mistake", "is_blunder",
+		"centipawn_change", "best_move_uci", "is_inaccuracy", "is_mistake", "is_blunder", "is_suboptimal",
+		"normalized_fen_before",
 	))
 	if err != nil {
 		return err
@@ -259,6 +270,8 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 
 	for _, g := range games {
 		for _, e := range g.Moves {
+
+			normalizedFen := NormalizeFEN(e.FenBefore.FEN)
 			if _, err := stmt.Exec(
 				g.GameId,
 				e.Ply,
@@ -278,6 +291,8 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 				e.Analysis.Is_Innacuracy,
 				e.Analysis.Is_Mistake,
 				e.Analysis.Is_Blunder,
+				e.Analysis.Is_Suboptimal,
+				normalizedFen,
 			); err != nil {
 				return err
 			}
@@ -295,13 +310,15 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 			game_id, ply, move_number, fen_before,
 			fen_after, move_uci, played_by,
 			eval_depth, eval_time, eval_before_cp,
-			eval_after_cp, eval_before_mate, eval_after_mate, centipawn_change, best_move_uci, is_inaccuracy, is_mistake, is_blunder
+			eval_after_cp, eval_before_mate, eval_after_mate, centipawn_change, best_move_uci, is_inaccuracy, is_mistake, is_blunder,
+			is_suboptimal, normalized_fen_before
 		)
 		SELECT
 			game_id, ply, move_number, fen_before,
 			fen_after, move_uci, played_by,
 			eval_depth, eval_time, eval_before_cp,
-			eval_after_cp, eval_before_mate, eval_after_mate, centipawn_change, best_move_uci, is_inaccuracy, is_mistake, is_blunder
+			eval_after_cp, eval_before_mate, eval_after_mate, centipawn_change, best_move_uci, is_inaccuracy, is_mistake, is_blunder,
+			is_suboptimal, normalized_fen_before
 		FROM tmp_moves
 		ON CONFLICT (game_id, ply) DO NOTHING;
 	`)

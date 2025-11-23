@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	InaccuracyThreshold = 50  // 0.50 pawns
-	MistakeThreshold    = 100 // 1.00 pawns
-	BlunderThreshold    = 200 // 2.00 pawns
+	InaccuracyThreshold        = 50  // 0.50 pawns
+	MistakeThreshold           = 100 // 1.00 pawns
+	BlunderThreshold           = 200 // 2.00 pawns
+	OpeningInaccuracyThreshold = 30
 )
 
 func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config) ([]models.Move, error) {
@@ -167,6 +168,8 @@ func GetMoveAnalysis(color string, before, after models.FENEval) models.MoveAnal
 		res.Is_Mistake = true
 	} else if loss >= InaccuracyThreshold {
 		res.Is_Innacuracy = true
+	} else if loss >= OpeningInaccuracyThreshold {
+		res.Is_Suboptimal = true
 	}
 
 	return res
