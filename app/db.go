@@ -391,7 +391,11 @@ ORDER BY error_rate DESC, times_seen DESC;
 	}
 	defer rows.Close()
 
-	var reports []models.SuboptimalFensReport
+	var (
+		reports []models.SuboptimalFensReport
+		fens    []string
+	)
+
 	for rows.Next() {
 		var fen models.SuboptimalFen
 		var blunderCount int
@@ -408,24 +412,58 @@ ORDER BY error_rate DESC, times_seen DESC;
 			return nil, err
 		}
 
-		moves, err := fetchErrorMoves(ctx, username, fen.NormalizedFenBefore)
-		if err != nil {
-			return nil, err
-		}
+		// collect FEN list for batch query
+		fens = append(fens, fen.NormalizedFenBefore)
 
 		reports = append(reports, models.SuboptimalFensReport{
 			BadFen: fen,
-			Moves:  moves,
+			Moves:  nil, // will fill after batch query
 		})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
+	if len(reports) == 0 {
+		return reports, nil
+	}
+
+	// batch fetch moves for all FENs at once
+	movesByFEN, err := fetchErrorMovesBatch(ctx, username, fens)
+	if err != nil {
+		return nil, err
+	}
+
+	// attach moves to each report
+	for i := range reports {
+		fenKey := reports[i].BadFen.NormalizedFenBefore
+		if mv, ok := movesByFEN[fenKey]; ok {
+			reports[i].Moves = mv
+		} else {
+			// keep as empty slice if no moves found
+			reports[i].Moves = []models.Move{}
+		}
+	}
+
 	return reports, nil
 }
 
-func fetchErrorMoves(ctx context.Context, username, normalizedFen string) ([]models.Move, error) {
+// Thin wrapper to preserve existing API if other code calls this.
+// func fetchErrorMoves(ctx context.Context, username, normalizedFen string) ([]models.Move, error) {
+// 	movesByFEN, err := fetchErrorMovesBatch(ctx, username, []string{normalizedFen})
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return movesByFEN[normalizedFen], nil
+// }
+
+// New batched helper: fetches error moves for many FENs in one query.
+func fetchErrorMovesBatch(ctx context.Context, username string, normalizedFens []string) (map[string][]models.Move, error) {
+	result := make(map[string][]models.Move, len(normalizedFens))
+	if len(normalizedFens) == 0 {
+		return result, nil
+	}
+
 	const movesQuery = `
 SELECT
     g.username,
@@ -459,25 +497,24 @@ SELECT
     m.is_blunder
 FROM moves m
 JOIN games g ON g.id = m.game_id
-WHERE g.username          = $1
-  AND m.played_by         = g.username
-  AND m.normalized_fen_before = $2
+WHERE g.username              = $1
+  AND m.played_by             = g.username
+  AND m.normalized_fen_before = ANY($2)
   AND (
         m.is_suboptimal
      OR m.is_inaccuracy
      OR m.is_mistake
      OR m.is_blunder
   )
-ORDER BY g.when_unix DESC;
+ORDER BY m.normalized_fen_before, g.when_unix DESC;
 `
 
-	rows, err := db.QueryContext(ctx, movesQuery, username, normalizedFen)
+	rows, err := db.QueryContext(ctx, movesQuery, username, pq.Array(normalizedFens))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var moves []models.Move
 	for rows.Next() {
 		var (
 			user        string
@@ -486,7 +523,7 @@ ORDER BY g.when_unix DESC;
 			gameColor   string
 			opponent    string
 			opponentElo int
-			result      string
+			resultStr   string
 			timeClass   string
 			timeControl string
 
@@ -515,7 +552,7 @@ ORDER BY g.when_unix DESC;
 			&gameColor,
 			&opponent,
 			&opponentElo,
-			&result,
+			&resultStr,
 			&timeClass,
 			&timeControl,
 			&gameID,
@@ -542,11 +579,10 @@ ORDER BY g.when_unix DESC;
 		_ = whenUnix
 		_ = gameColor
 		_ = opponentElo
-		_ = result
+		_ = resultStr
 		_ = timeClass
 		_ = timeControl
 		_ = gameID
-		_ = normalized
 		_ = evalAfterCP
 
 		mv := models.Move{
@@ -575,14 +611,17 @@ ORDER BY g.when_unix DESC;
 			Opponent: opponent,
 		}
 
-		moves = append(moves, mv)
+		result[normalized] = append(result[normalized], mv)
 	}
+
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	return moves, nil
+
+	return result, nil
 }
 
+// unchanged helper
 func nullableIntToPtr(v sql.NullInt64) *int {
 	if !v.Valid {
 		return nil
