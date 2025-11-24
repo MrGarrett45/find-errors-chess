@@ -25,6 +25,10 @@ type Move struct {
 	FenBefore  FENEval
 	FenAfter   FENEval
 	Analysis   MoveAnalysis
+
+	//Used for reporting bad fens
+	URL      string
+	Opponent string
 }
 type FENEval struct {
 	MoveNumber int      `json:"move_number"` // fullmove number from FEN
@@ -39,4 +43,21 @@ type MoveAnalysis struct {
 	Is_Innacuracy bool
 	Is_Mistake    bool
 	Is_Blunder    bool
+}
+
+//FENs where you've made a bad move and how many times you've done it
+type SuboptimalFen struct {
+	NormalizedFenBefore string
+	TimesSeen           int
+	SuboptimalCount     int
+	InaccuracyCount     int
+	MistakeCount        int
+	ErrorCount          int
+	ErrorRate           float64
+}
+
+//Further details for each bad FEN by game, what move you made, what you should have made, etc
+type SuboptimalFensReport struct {
+	BadFen SuboptimalFen
+	Moves  []Move
 }

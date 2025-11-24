@@ -10,5 +10,6 @@ func main() {
 	app.MustInitDB()
 	router := gin.Default()
 	router.GET("chessgames/:username", app.GetChessGames)
+	router.GET("errors/:username", app.GetErrorPositions)
 	router.Run("localhost:8080")
 }

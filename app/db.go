@@ -330,3 +330,263 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 
 	return tx.Commit()
 }
+
+func FindErrorPositions(ctx context.Context, username string) ([]models.SuboptimalFensReport, error) {
+	if db == nil {
+		return []models.SuboptimalFensReport{}, nil
+	}
+
+	const fenQuery = `
+WITH user_moves AS (
+    SELECT
+        m.*,
+        g.username,
+        g.color        AS game_color,
+        g.time_class,
+        g.url
+    FROM moves m
+    JOIN games g ON g.id = m.game_id
+    WHERE g.username   = $1
+      AND m.played_by  = g.username
+      AND m.move_number <= 10
+),
+position_stats AS (
+    SELECT
+        normalized_fen_before,
+        COUNT(*) AS times_seen,
+        SUM(CASE WHEN is_suboptimal THEN 1 ELSE 0 END) AS suboptimal_count,
+        SUM(CASE WHEN is_inaccuracy THEN 1 ELSE 0 END) AS inaccuracy_count,
+        SUM(CASE WHEN is_mistake    THEN 1 ELSE 0 END) AS mistake_count,
+        SUM(CASE WHEN is_blunder    THEN 1 ELSE 0 END) AS blunder_count,
+        SUM(
+            CASE
+                WHEN is_suboptimal
+                  OR is_inaccuracy
+                  OR is_mistake
+                  OR is_blunder
+                THEN 1 ELSE 0
+            END
+        ) AS error_count
+    FROM user_moves
+    GROUP BY normalized_fen_before
+)
+SELECT
+    normalized_fen_before,
+    times_seen,
+    suboptimal_count,
+    inaccuracy_count,
+    mistake_count,
+    blunder_count,
+    error_count,
+    (error_count::float / times_seen) AS error_rate
+FROM position_stats
+WHERE times_seen  >= 3
+  AND error_count >= 2
+ORDER BY error_rate DESC, times_seen DESC;
+`
+
+	rows, err := db.QueryContext(ctx, fenQuery, username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var reports []models.SuboptimalFensReport
+	for rows.Next() {
+		var fen models.SuboptimalFen
+		var blunderCount int
+		if err := rows.Scan(
+			&fen.NormalizedFenBefore,
+			&fen.TimesSeen,
+			&fen.SuboptimalCount,
+			&fen.InaccuracyCount,
+			&fen.MistakeCount,
+			&blunderCount,
+			&fen.ErrorCount,
+			&fen.ErrorRate,
+		); err != nil {
+			return nil, err
+		}
+
+		moves, err := fetchErrorMoves(ctx, username, fen.NormalizedFenBefore)
+		if err != nil {
+			return nil, err
+		}
+
+		reports = append(reports, models.SuboptimalFensReport{
+			BadFen: fen,
+			Moves:  moves,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return reports, nil
+}
+
+func fetchErrorMoves(ctx context.Context, username, normalizedFen string) ([]models.Move, error) {
+	const movesQuery = `
+SELECT
+    g.username,
+    g.url,
+    g.when_unix,
+    g.color            AS game_color,
+    g.opponent,
+    g.opponent_rating,
+    g.result,
+    g.time_class,
+    g.time_control,
+
+    m.game_id,
+    m.ply,
+    m.move_number,
+    m.color            AS move_color,
+    m.normalized_fen_before,
+    m.fen_before,
+
+    m.move_san,
+    m.move_uci         AS played_move_uci,
+    m.best_move_uci    AS engine_best_move_uci,
+
+    m.eval_before_cp,
+    m.eval_after_cp,
+    m.centipawn_change,
+
+    m.is_suboptimal,
+    m.is_inaccuracy,
+    m.is_mistake,
+    m.is_blunder
+FROM moves m
+JOIN games g ON g.id = m.game_id
+WHERE g.username          = $1
+  AND m.played_by         = g.username
+  AND m.normalized_fen_before = $2
+  AND (
+        m.is_suboptimal
+     OR m.is_inaccuracy
+     OR m.is_mistake
+     OR m.is_blunder
+  )
+ORDER BY g.when_unix DESC;
+`
+
+	rows, err := db.QueryContext(ctx, movesQuery, username, normalizedFen)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var moves []models.Move
+	for rows.Next() {
+		var (
+			user        string
+			url         string
+			whenUnix    int64
+			gameColor   string
+			opponent    string
+			opponentElo int
+			result      string
+			timeClass   string
+			timeControl string
+
+			gameID         int64
+			ply            int
+			moveNumber     int
+			moveColor      string
+			normalized     string
+			fenBefore      string
+			moveSAN        sql.NullString
+			playedMoveUCI  string
+			engineBestMove sql.NullString
+			evalBeforeCP   sql.NullInt64
+			evalAfterCP    sql.NullInt64
+			cpChange       sql.NullInt64
+			isSuboptimal   bool
+			isInaccuracy   bool
+			isMistake      bool
+			isBlunder      bool
+		)
+
+		if err := rows.Scan(
+			&user,
+			&url,
+			&whenUnix,
+			&gameColor,
+			&opponent,
+			&opponentElo,
+			&result,
+			&timeClass,
+			&timeControl,
+			&gameID,
+			&ply,
+			&moveNumber,
+			&moveColor,
+			&normalized,
+			&fenBefore,
+			&moveSAN,
+			&playedMoveUCI,
+			&engineBestMove,
+			&evalBeforeCP,
+			&evalAfterCP,
+			&cpChange,
+			&isSuboptimal,
+			&isInaccuracy,
+			&isMistake,
+			&isBlunder,
+		); err != nil {
+			return nil, err
+		}
+
+		// quiet unused context fields that are not mapped onto the Move struct
+		_ = whenUnix
+		_ = gameColor
+		_ = opponentElo
+		_ = result
+		_ = timeClass
+		_ = timeControl
+		_ = gameID
+		_ = normalized
+		_ = evalAfterCP
+
+		mv := models.Move{
+			Move:       playedMoveUCI,
+			PlayedBy:   user,
+			MoveNumber: moveNumber,
+			Ply:        ply,
+			Color:      moveColor,
+			FenBefore: models.FENEval{
+				MoveNumber: moveNumber,
+				SideToMove: moveColor,
+				FEN:        fenBefore,
+				Score: models.UCIScore{
+					CP:   nullableIntToPtr(evalBeforeCP),
+					Best: engineBestMove.String,
+				},
+			},
+			Analysis: models.MoveAnalysis{
+				CPChange:      int(cpChange.Int64),
+				Is_Suboptimal: isSuboptimal,
+				Is_Innacuracy: isInaccuracy,
+				Is_Mistake:    isMistake,
+				Is_Blunder:    isBlunder,
+			},
+			URL:      url,
+			Opponent: opponent,
+		}
+
+		moves = append(moves, mv)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return moves, nil
+}
+
+func nullableIntToPtr(v sql.NullInt64) *int {
+	if !v.Valid {
+		return nil
+	}
+	n := int(v.Int64)
+	return &n
+}

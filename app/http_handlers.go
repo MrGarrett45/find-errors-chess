@@ -101,6 +101,31 @@ func GetChessGames(c *gin.Context) {
 	})
 }
 
+// GetErrorPositions returns a slice of error positions for the given user.
+// It relies on a db function that will be implemented later.
+func GetErrorPositions(c *gin.Context) {
+	username := strings.ToLower(c.Param("username"))
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing username"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	positions, err := FindErrorPositions(ctx, username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"username":  username,
+		"count":     len(positions),
+		"positions": positions,
+	})
+}
+
 var errUserNotFound = errors.New("user not found")
 
 func fetchArchives(ctx context.Context, username string) ([]string, error) {
