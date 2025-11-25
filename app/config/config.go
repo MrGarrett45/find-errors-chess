@@ -46,32 +46,32 @@ type EngineConfig struct {
 func LoadConfig() (*Config, error) {
 	moveTime, err := strconv.Atoi(os.Getenv("ENGINE_MOVE_TIME"))
 	if err != nil {
-		log.Fatalf("Error converting string to int: %v", err)
+		log.Fatalf("Error converting string to int: ENGINE_MOVE_TIME: %v", err)
 	}
 
 	numMoves, err := strconv.Atoi(os.Getenv("ENGINE_NUMBER_OF_MOVES"))
 	if err != nil {
-		log.Fatalf("Error converting string to int: %v", err)
+		log.Fatalf("Error converting string to int: ENGINE_NUMBER_OF_MOVES: %v", err)
 	}
 
 	numGames, err := strconv.Atoi(os.Getenv("ENGINE_NUMBER_OF_GAMES"))
 	if err != nil {
-		log.Fatalf("Error converting string to int: %v", err)
+		log.Fatalf("Error converting string to int: ENGINE_NUMBER_OF_GAMES: %v", err)
 	}
 
 	batchIndex, err := strconv.Atoi(os.Getenv("ENGINE_BATCH_INDEX"))
 	if err != nil {
-		log.Fatalf("Error converting string to int: %v", err)
+		log.Fatalf("Error converting string to int: ENGINE_BATCH_INDEX: %v", err)
 	}
 
 	depth, err := strconv.Atoi(os.Getenv("ENGINE_DEPTH"))
 	if err != nil {
-		log.Fatalf("Error parsing ENGINE_DEPTH_OR_TIME: %v", err)
+		log.Fatalf("Error converting string to int: ENGINE_DEPTH_OR_TIME: %v", err)
 	}
 
 	httpNumGames, err := strconv.Atoi(os.Getenv("HTTP_NUMBER_OF_GAMES"))
 	if err != nil {
-		log.Fatalf("Error parsing HTTP_NUMBER_OF_GAMES: %v", err)
+		log.Fatalf("Error converting string to int: HTTP_NUMBER_OF_GAMES: %v", err)
 	}
 
 	depthOrTime, err := strconv.ParseBool(os.Getenv("ENGINE_DEPTH_OR_TIME"))
