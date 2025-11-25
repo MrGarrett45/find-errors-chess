@@ -40,6 +40,7 @@ type EngineConfig struct {
 	Depth       int
 	NumMoves    int //how many moves should the engine process
 	NumGames    int
+	BatchIndex  int
 }
 
 func LoadConfig() (*Config, error) {
@@ -54,6 +55,11 @@ func LoadConfig() (*Config, error) {
 	}
 
 	numGames, err := strconv.Atoi(os.Getenv("ENGINE_NUMBER_OF_GAMES"))
+	if err != nil {
+		log.Fatalf("Error converting string to int: %v", err)
+	}
+
+	batchIndex, err := strconv.Atoi(os.Getenv("ENGINE_BATCH_INDEX"))
 	if err != nil {
 		log.Fatalf("Error converting string to int: %v", err)
 	}
@@ -92,6 +98,7 @@ func LoadConfig() (*Config, error) {
 			DepthOrTime: depthOrTime,
 			NumMoves:    numMoves,
 			NumGames:    numGames,
+			BatchIndex:  batchIndex,
 		},
 		Http: HTTPConfig{
 			NumGames: httpNumGames,

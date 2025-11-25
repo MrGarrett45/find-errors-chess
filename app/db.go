@@ -162,8 +162,9 @@ func saveGames(ctx context.Context, username string, games []models.GameLite) er
 	return tx.Commit()
 }
 
-// loadGames reads the last N games for a username from the 'games' table
-func LoadGames(ctx context.Context, username string, limit int) ([]models.GameLite, error) {
+// LoadGames reads a batch of games for a username using LIMIT/OFFSET.
+// Example: limit = 100, offset = batchIndex * limit
+func LoadGames(ctx context.Context, username string, limit, offset int) ([]models.GameLite, error) {
 	rows, err := db.QueryContext(ctx, `
 		SELECT
 			id,
@@ -181,7 +182,8 @@ func LoadGames(ctx context.Context, username string, limit int) ([]models.GameLi
 		WHERE username = $1
 		ORDER BY when_unix DESC
 		LIMIT $2
-	`, username, limit)
+		OFFSET $3
+	`, username, limit, offset)
 	if err != nil {
 		return nil, err
 	}

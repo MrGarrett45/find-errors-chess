@@ -21,8 +21,9 @@ func main() {
 	defer cancel()
 
 	app.MustInitDB()
-	//load last x number of games
-	games, err := app.LoadGames(ctx, cfg.User, cfg.Engine.NumGames)
+
+	offset := cfg.Engine.BatchIndex * cfg.Engine.NumGames
+	games, err := app.LoadGames(ctx, cfg.User, cfg.Engine.NumGames, offset)
 	if err != nil {
 		log.Fatalf("loadGames: %v", err)
 	}
