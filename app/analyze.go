@@ -3,7 +3,6 @@ package app
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -121,8 +120,9 @@ func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite) (mode
 
 	g.Moves = moves
 
-	b, _ := json.MarshalIndent(g, "", "  ")
-	log.Printf("Analysis result: %s", string(b))
+	//Uncomment if you want to see games as they are analyzed
+	// b, _ := json.MarshalIndent(g, "", "  ")
+	// log.Printf("Analysis result: %s", string(b))
 
 	return g, nil
 }
