@@ -6,6 +6,7 @@ import (
 	"example/my-go-api/app/config"
 	"example/my-go-api/app/models"
 	"log"
+	"os"
 	"sync"
 	"time"
 )
@@ -16,6 +17,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+
+	log.Printf("Loaded worker for: %v, batch_index: %v, number_of_games, %v, workers: %v", cfg.User, cfg.Engine.BatchIndex, cfg.Engine.NumGames, os.Getenv("WORKERS"))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
