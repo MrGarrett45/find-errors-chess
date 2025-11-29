@@ -631,3 +631,44 @@ func nullableIntToPtr(v sql.NullInt64) *int {
 	n := int(v.Int64)
 	return &n
 }
+
+func CreateJob(ctx context.Context, username string, totalGames, batchSize, totalBatches int) (string, error) {
+	const q = `
+        INSERT INTO jobs (username, total_games, batch_size, total_batches)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id;
+    `
+	var jobID string
+	if err := db.QueryRowContext(ctx, q, username, totalGames, batchSize, totalBatches).Scan(&jobID); err != nil {
+		return "", err
+	}
+	log.Printf("Created job %s for user=%s totalGames=%d totalBatches=%d", jobID, username, totalGames, totalBatches)
+	return jobID, nil
+}
+
+// UpdateJobProgress increments completed_batches for a job and sets
+// status to 'running' or 'completed' accordingly.
+func UpdateJobProgress(ctx context.Context, jobID string) error {
+	const q = `
+        UPDATE jobs
+        SET
+            completed_batches = completed_batches + 1,
+            status = CASE
+                WHEN completed_batches + 1 >= total_batches THEN 'completed'
+                ELSE 'running'
+            END,
+            updated_at = now()
+        WHERE id = $1;
+    `
+
+	res, err := db.ExecContext(ctx, q, jobID)
+	if err != nil {
+		return err
+	}
+
+	if rows, err := res.RowsAffected(); err == nil && rows == 0 {
+		log.Printf("UpdateJobProgress: no job row found for id=%s", jobID)
+	}
+
+	return nil
+}

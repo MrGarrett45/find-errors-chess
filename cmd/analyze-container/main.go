@@ -99,6 +99,13 @@ func main() {
 				continue
 			}
 
+			if job.JobID != "" {
+				if err := app.UpdateJobProgress(baseCtx, job.JobID); err != nil {
+					log.Printf("failed to update job progress for job_id=%s: %v", job.JobID, err)
+					// we still delete the message so we don't re-run the batch
+				}
+			}
+
 			// Success: delete message from queue
 			deleteMessage(sqsClient, queueURL, m)
 		}

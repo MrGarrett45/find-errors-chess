@@ -16,7 +16,7 @@ COPY . .
 
 # Build specifically the cmd/analyze main
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -o analyze ./cmd/analyze
+    go build -o analyze ./cmd/analyze-container
 
 ########################
 # 2. Runtime stage

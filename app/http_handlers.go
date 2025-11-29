@@ -6,12 +6,17 @@ import (
 	"errors"
 	"fmt"
 	"log"
+
 	"net/http"
 	"strings"
 	"time"
 
+	"example/my-go-api/app/config"
 	"example/my-go-api/app/models"
 
+	aws "github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/gin-gonic/gin"
 )
 
@@ -53,7 +58,11 @@ func GetChessGames(c *gin.Context) {
 		return
 	}
 	if len(archives) == 0 {
-		c.JSON(http.StatusOK, gin.H{"username": username, "games": []models.GameLite{}})
+		c.JSON(http.StatusOK, gin.H{
+			"username": username,
+			"count":    0,
+			"games":    []models.GameLite{},
+		})
 		return
 	}
 
@@ -89,15 +98,102 @@ func GetChessGames(c *gin.Context) {
 		}
 	}
 
-	if err := saveGames(ctx, username, out[0:1000]); err != nil {
-		// For now, just log – you can upgrade this to proper logging later
-		log.Printf("saveGames failed for %s: %v", username, err)
+	if len(out) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"username": username,
+			"count":    0,
+			"games":    []models.GameLite{},
+		})
+		return
 	}
 
+	// ---- load config for limits + queue URL ----
+
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Printf("LoadConfig failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load config"})
+		return
+	}
+
+	// How many games do we keep/save from this endpoint?
+	limit := cfg.Http.NumGames
+	if limit <= 0 || limit > len(out) {
+		limit = len(out)
+	}
+	gamesToSave := out[:limit]
+
+	// Save games
+	if err := saveGames(ctx, username, gamesToSave); err != nil {
+		log.Printf("saveGames failed for %s: %v", username, err)
+		// not fatal for the endpoint, we still return a 200 w/ games
+	}
+
+	// ---- compute batches and create a job row ----
+
+	batchSize := cfg.Engine.NumGames // games per worker/batch
+	if batchSize <= 0 {
+		batchSize = 100 // sane fallback
+	}
+
+	totalGames := limit
+	totalBatches := (totalGames + batchSize - 1) / batchSize // ceil division
+
+	// Record that a job has begun
+	jobID, err := CreateJob(ctx, username, totalGames, batchSize, totalBatches)
+	if err != nil {
+		log.Printf("failed to create job for user=%s: %v", username, err)
+		// you can choose to fail the request here if job creation is critical
+		// for now we just log and continue
+	}
+
+	// ---- enqueue SQS jobs with that jobID ----
+
+	if cfg.QueueURL == "" {
+		log.Printf("QUEUE_URL missing in config; skipping enqueue for user=%s", username)
+	} else if jobID == "" {
+		log.Printf("jobID empty; skipping enqueue for user=%s", username)
+	} else {
+		awsCfg, err := awsconfig.LoadDefaultConfig(ctx)
+		if err != nil {
+			log.Printf("failed to load AWS config for SQS: %v", err)
+		} else {
+			sqsClient := sqs.NewFromConfig(awsCfg)
+
+			for batchIndex := 0; batchIndex < totalBatches; batchIndex++ {
+				jobMsg := models.JobMessage{
+					User:       username,
+					BatchIndex: batchIndex,
+					NumGames:   batchSize,
+					JobID:      jobID, // <-- UUID from DB
+				}
+
+				body, err := json.Marshal(jobMsg)
+				if err != nil {
+					log.Printf("failed to marshal JobMessage for user=%s batch=%d: %v",
+						username, batchIndex, err)
+					continue
+				}
+
+				_, err = sqsClient.SendMessage(ctx, &sqs.SendMessageInput{
+					QueueUrl:    &cfg.QueueURL,
+					MessageBody: aws.String(string(body)),
+				})
+				if err != nil {
+					log.Printf("failed to send SQS message for user=%s batch=%d: %v",
+						username, batchIndex, err)
+				}
+			}
+		}
+	}
+
+	// ---- Response: send back the games we actually saved/are processing ----
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"username": username,
-		"count":    len(out),
-		"games":    out,
+		"count":    len(gamesToSave),
+		"games":    gamesToSave,
+		"job_id":   jobID,
+		"batches":  totalBatches,
 	})
 }
 
