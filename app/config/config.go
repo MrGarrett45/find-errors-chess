@@ -10,11 +10,12 @@ import (
 )
 
 type Config struct {
-	Logs   LogConfig
-	DB     PostgresConfig
-	User   string
-	Engine EngineConfig
-	Http   HTTPConfig
+	Logs     LogConfig
+	DB       PostgresConfig
+	User     string
+	Engine   EngineConfig
+	Http     HTTPConfig
+	QueueURL string
 }
 
 type LogConfig struct {
@@ -80,7 +81,8 @@ func LoadConfig() (*Config, error) {
 	}
 
 	cfg := &Config{
-		User: os.Getenv("USER"),
+		User:     os.Getenv("USER"),
+		QueueURL: os.Getenv("QUEUE_URL"),
 		Logs: LogConfig{
 			Style: os.Getenv("LOG_STYLE"),
 			Level: os.Getenv("LOG_LEVEL"),
