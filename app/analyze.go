@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"example/my-go-api/app/config"
@@ -178,4 +180,90 @@ func GetMoveAnalysis(color string, before, after models.FENEval) models.MoveAnal
 	}
 
 	return res
+}
+
+// processBatch contains your old main logic for a single batch.
+func ProcessBatch(ctx context.Context, cfg *config.Config, job models.JobMessage) error {
+	start := time.Now()
+
+	offset := job.BatchIndex * job.NumGames
+
+	log.Printf(
+		"Processing batch: user=%s batch_index=%d num_games=%d offset=%d workers=%s",
+		job.User, job.BatchIndex, job.NumGames, offset, os.Getenv("WORKERS"),
+	)
+
+	games, err := LoadGames(ctx, job.User, job.NumGames, offset)
+	if err != nil {
+		return err
+	}
+	if len(games) == 0 {
+		log.Printf("no games found for %s (batch_index=%d)", job.User, job.BatchIndex)
+		return nil
+	}
+
+	numWorkers := GetWorkerCount()
+	log.Printf("Analyzing %d games with %d workers", len(games), numWorkers)
+
+	jobs := make(chan models.GameLite, len(games))
+	results := make(chan models.GameLite, len(games))
+	var wg sync.WaitGroup
+
+	// Start workers
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+
+			eng, err := NewUCIEngine(cfg.Engine.Path)
+			if err != nil {
+				log.Printf("worker %d: failed to create engine: %v", id, err)
+				return
+			}
+			defer eng.Close()
+			_ = eng.NewGame()
+
+			for g := range jobs {
+				if report, err := AnalyzeOneGame(cfg, eng, g); err != nil {
+					log.Printf("worker %d: error analyzing game %s: %v", id, g.URL, err)
+				} else {
+					results <- report
+				}
+			}
+		}(i)
+	}
+
+	// Feed jobs
+	go func() {
+		defer close(jobs)
+		for _, g := range games {
+			jobs <- g
+		}
+	}()
+
+	// Close results once ALL workers are done
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	var allResults []models.GameLite
+	for res := range results {
+		allResults = append(allResults, res)
+	}
+
+	// Separate timeout for DB write
+	ctx2, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
+	if err := SaveMoves(ctx2, cfg, allResults); err != nil {
+		return err
+	}
+
+	log.Printf(
+		"Batch complete: user=%s batch_index=%d num_results=%d took=%s",
+		job.User, job.BatchIndex, len(allResults), time.Since(start),
+	)
+
+	return nil
 }
