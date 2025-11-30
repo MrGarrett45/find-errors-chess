@@ -257,6 +257,7 @@ func ProcessBatch(ctx context.Context, cfg *config.Config, job models.JobMessage
 	defer cancel()
 
 	if err := SaveMoves(ctx2, cfg, allResults); err != nil {
+		log.Printf("SaveMoves failed for user=%s batch_index=%d: %v", job.User, job.BatchIndex, err)
 		return err
 	}
 

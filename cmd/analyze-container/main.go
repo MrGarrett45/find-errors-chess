@@ -38,9 +38,10 @@ func main() {
 	}
 	sqsClient := sqs.NewFromConfig(awsCfg)
 
-	log.Printf("Worker started, listening on SQS queue: %s", queueURL)
+	log.Println("Worker started")
 
 	for {
+		log.Printf("Listening on SQS queue: %s", queueURL)
 		// Long-poll SQS
 		recvCtx, cancel := context.WithTimeout(baseCtx, 30*time.Second)
 		resp, err := sqsClient.ReceiveMessage(recvCtx, &sqs.ReceiveMessageInput{
