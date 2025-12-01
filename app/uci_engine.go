@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 )
 
 type UCIEngine struct {
@@ -107,7 +108,11 @@ func (e *UCIEngine) EvalFEN(ctx context.Context, fen string, cfg *config.Config)
 
 	if cfg.Engine.DepthOrTime {
 		// Analyze using depth
-		if err := e.send("go depth 15"); err != nil {
+		depth := cfg.Engine.Depth
+		if depth <= 0 {
+			depth = 12
+		}
+		if err := e.send(fmt.Sprintf("go depth %d", depth)); err != nil {
 			return models.UCIScore{}, err
 		}
 	} else {
@@ -160,7 +165,12 @@ func (e *UCIEngine) EvalFEN(ctx context.Context, fen string, cfg *config.Config)
 	var err error
 	select {
 	case <-ctx.Done():
-		err = ctx.Err()
+		_ = e.send("stop")
+		select {
+		case err = <-readDone:
+		case <-time.After(500 * time.Millisecond):
+			err = ctx.Err()
+		}
 	case err = <-readDone:
 	}
 	if err != nil && err != bufio.ErrBufferFull {
