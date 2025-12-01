@@ -23,7 +23,7 @@ const (
 	OpeningInaccuracyThreshold = 30
 )
 
-func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config) ([]models.Move, error) {
+func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config, username string) ([]models.Move, error) {
 	// Parse PGN into new game
 	g := chess.NewGame()
 	if err := g.UnmarshalText([]byte(meta.PGN)); err != nil {
@@ -64,7 +64,7 @@ func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config) ([]mod
 			color = "b"
 		}
 
-		playedBy := cfg.User
+		playedBy := username
 		if string(meta.Color[0]) != color {
 			playedBy = meta.Opponent
 		}
@@ -110,12 +110,12 @@ func fenInfoFromPosition(pos *chess.Position) models.FENEval {
 }
 
 // What we let our workers call to process games
-func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite) (models.GameLite, error) {
-	log.Printf("Analyzing game: %s vs %s (%s)", cfg.User, g.Opponent, g.URL)
+func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite, username string) (models.GameLite, error) {
+	log.Printf("Analyzing game: %s vs %s (%s)", username, g.Opponent, g.URL)
 
 	g.PGN = NormalizeChessDotComPGN(g.PGN)
 
-	moves, err := AnalyzePGN(g, eng, cfg)
+	moves, err := AnalyzePGN(g, eng, cfg, username)
 	if err != nil {
 		return models.GameLite{}, err
 	}
@@ -224,7 +224,7 @@ func ProcessBatch(ctx context.Context, cfg *config.Config, job models.JobMessage
 			_ = eng.NewGame()
 
 			for g := range jobs {
-				if report, err := AnalyzeOneGame(cfg, eng, g); err != nil {
+				if report, err := AnalyzeOneGame(cfg, eng, g, job.User); err != nil {
 					log.Printf("worker %d: error analyzing game %s: %v", id, g.URL, err)
 				} else {
 					results <- report

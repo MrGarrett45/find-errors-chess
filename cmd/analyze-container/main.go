@@ -7,7 +7,6 @@ import (
 	"example/my-go-api/app/config"
 	"example/my-go-api/app/models"
 	"log"
-	"os"
 	"time"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -26,11 +25,6 @@ func main() {
 
 	app.MustInitDB()
 
-	queueURL := os.Getenv("QUEUE_URL")
-	if queueURL == "" {
-		log.Fatal("QUEUE_URL environment variable is required")
-	}
-
 	// AWS config & SQS client
 	awsCfg, err := awsconfig.LoadDefaultConfig(baseCtx)
 	if err != nil {
@@ -41,11 +35,11 @@ func main() {
 	log.Println("Worker started")
 
 	for {
-		log.Printf("Listening on SQS queue: %s", queueURL)
+		log.Printf("Listening on SQS queue: %s", cfg.QueueURL)
 		// Long-poll SQS
 		recvCtx, cancel := context.WithTimeout(baseCtx, 30*time.Second)
 		resp, err := sqsClient.ReceiveMessage(recvCtx, &sqs.ReceiveMessageInput{
-			QueueUrl:            &queueURL,
+			QueueUrl:            &cfg.QueueURL,
 			MaxNumberOfMessages: 5,   // up to 10; tune as you like
 			WaitTimeSeconds:     20,  // enable long polling
 			VisibilityTimeout:   180, // seconds; must be > max batch processing time
@@ -75,7 +69,7 @@ func main() {
 				log.Printf("failed to unmarshal job message: %v, body=%s", err, *m.Body)
 				// Option: send to DLQ or delete to avoid poison pill
 				// Here we delete to avoid infinite retries:
-				deleteMessage(sqsClient, queueURL, m)
+				deleteMessage(sqsClient, cfg.QueueURL, m)
 				continue
 			}
 
@@ -108,7 +102,7 @@ func main() {
 			}
 
 			// Success: delete message from queue
-			deleteMessage(sqsClient, queueURL, m)
+			deleteMessage(sqsClient, cfg.QueueURL, m)
 		}
 	}
 }

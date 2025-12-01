@@ -12,7 +12,6 @@ import (
 type Config struct {
 	Logs     LogConfig
 	DB       PostgresConfig
-	User     string
 	Engine   EngineConfig
 	Http     HTTPConfig
 	QueueURL string
@@ -41,7 +40,6 @@ type EngineConfig struct {
 	Depth       int
 	NumMoves    int //how many moves should the engine process
 	NumGames    int
-	BatchIndex  int
 }
 
 func LoadConfig() (*Config, error) {
@@ -60,11 +58,6 @@ func LoadConfig() (*Config, error) {
 		log.Fatalf("Error converting string to int: ENGINE_NUMBER_OF_GAMES: %v", err)
 	}
 
-	batchIndex, err := strconv.Atoi(os.Getenv("ENGINE_BATCH_INDEX"))
-	if err != nil {
-		log.Fatalf("Error converting string to int: ENGINE_BATCH_INDEX: %v", err)
-	}
-
 	depth, err := strconv.Atoi(os.Getenv("ENGINE_DEPTH"))
 	if err != nil {
 		log.Fatalf("Error converting string to int: ENGINE_DEPTH_OR_TIME: %v", err)
@@ -81,7 +74,6 @@ func LoadConfig() (*Config, error) {
 	}
 
 	cfg := &Config{
-		User:     os.Getenv("USER"),
 		QueueURL: os.Getenv("QUEUE_URL"),
 		Logs: LogConfig{
 			Style: os.Getenv("LOG_STYLE"),
@@ -100,7 +92,6 @@ func LoadConfig() (*Config, error) {
 			DepthOrTime: depthOrTime,
 			NumMoves:    numMoves,
 			NumGames:    numGames,
-			BatchIndex:  batchIndex,
 		},
 		Http: HTTPConfig{
 			NumGames: httpNumGames,
