@@ -13,7 +13,6 @@ type Config struct {
 	Logs     LogConfig
 	DB       PostgresConfig
 	Engine   EngineConfig
-	Http     HTTPConfig
 	QueueURL string
 }
 
@@ -21,11 +20,6 @@ type LogConfig struct {
 	Style string
 	Level string
 }
-
-type HTTPConfig struct {
-	NumGames int
-}
-
 type PostgresConfig struct {
 	Username string
 	Password string
@@ -63,11 +57,6 @@ func LoadConfig() (*Config, error) {
 		log.Fatalf("Error converting string to int: ENGINE_DEPTH_OR_TIME: %v", err)
 	}
 
-	httpNumGames, err := strconv.Atoi(os.Getenv("HTTP_NUMBER_OF_GAMES"))
-	if err != nil {
-		log.Fatalf("Error converting string to int: HTTP_NUMBER_OF_GAMES: %v", err)
-	}
-
 	depthOrTime, err := strconv.ParseBool(os.Getenv("ENGINE_DEPTH_OR_TIME"))
 	if err != nil {
 		log.Fatalf("Error parsing ENGINE_DEPTH_OR_TIME: %v", err)
@@ -92,9 +81,6 @@ func LoadConfig() (*Config, error) {
 			DepthOrTime: depthOrTime,
 			NumMoves:    numMoves,
 			NumGames:    numGames,
-		},
-		Http: HTTPConfig{
-			NumGames: httpNumGames,
 		},
 	}
 

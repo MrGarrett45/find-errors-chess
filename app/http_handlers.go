@@ -117,7 +117,15 @@ func GetChessGames(c *gin.Context) {
 	}
 
 	// How many games do we keep/save from this endpoint?
-	limit := cfg.Http.NumGames
+	limit := 0
+	if q := c.Query("limit"); q != "" {
+		if v, err := parsePositiveInt(q); err == nil && v > 0 {
+			limit = v
+		}
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
 	if limit <= 0 || limit > len(out) {
 		limit = len(out)
 	}
