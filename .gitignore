@@ -1,5 +1,5 @@
-.env
-.env.container
+backend/.env
+backend/.env.container
 infrastructure/
 launch.json
 todo.md
