@@ -4,5 +4,5 @@ Under development
 
 ToDo:
 1. Add lichess support
-3. Frontend 
-6. Add unit testing
+2. Frontend 
+3. Send opening data from backend
