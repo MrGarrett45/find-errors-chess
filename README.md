@@ -5,3 +5,4 @@ Under development
 ToDo:
 1. Add lichess support
 2. Frontend (0 -> 1 Request name, kick off process, track progress)
+3. Add caching so you don't re run stale analysis
