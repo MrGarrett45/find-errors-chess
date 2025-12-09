@@ -83,6 +83,7 @@ func GetChessGames(c *gin.Context) {
 		}
 		for _, g := range mg.Games {
 			color, opp, oppRating, result := derivePOV(username, g)
+			eco := NormalizeECO(g.ECO)
 			out = append(out, models.GameLite{
 				URL:         g.URL,
 				When:        g.EndTime,
@@ -94,6 +95,7 @@ func GetChessGames(c *gin.Context) {
 				TimeClass:   g.TimeClass,
 				TimeControl: g.TimeControl,
 				PGN:         g.PGN,
+				ECO:         eco,
 			})
 		}
 	}

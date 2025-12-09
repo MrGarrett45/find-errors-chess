@@ -123,3 +123,23 @@ func TestNormalizeFEN(t *testing.T) {
 		})
 	}
 }
+
+func TestNormalizeECO(t *testing.T) {
+	url := "https://www.chess.com/openings/Scotch-Game-Classical-Potter-Variation-5...Bb6-6.Nc3-Qf6-7.Qe2"
+	if got, want := NormalizeECO(url), "Scotch Game Classical Potter Variation"; got != want {
+		t.Fatalf("NormalizeECO = %q, want %q", got, want)
+	}
+
+	// Should drop trailing move tokens even without dashes.
+	if got, want := NormalizeECO("Caro Kann Defense Exchange Rubinstein Variation 7.h3 Bg7"), "Caro Kann Defense Exchange Rubinstein Variation"; got != want {
+		t.Fatalf("NormalizeECO trailing moves failed: %q, want %q", got, want)
+	}
+
+	if got := NormalizeECO("https://www.chess.com/openings/Queen-s-Gambit"); got != "Queen s Gambit" {
+		t.Fatalf("NormalizeECO basic failed: %q", got)
+	}
+
+	if got := NormalizeECO(""); got != "" {
+		t.Fatalf("NormalizeECO empty should be empty, got %q", got)
+	}
+}

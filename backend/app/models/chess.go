@@ -14,6 +14,7 @@ type GameLite struct {
 	PGN         string `json:"pgn"`          // included for convenience (you can omit if payload too big)
 	GameId      int
 	Moves       []Move
+	ECO         string `json:"eco"`
 }
 
 type Move struct {
@@ -29,6 +30,7 @@ type Move struct {
 	//Used for reporting bad fens
 	URL      string
 	Opponent string
+	ECO      string
 }
 type FENEval struct {
 	MoveNumber int      `json:"move_number"` // fullmove number from FEN

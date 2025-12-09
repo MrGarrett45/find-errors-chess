@@ -72,7 +72,8 @@ func saveGames(ctx context.Context, username string, games []models.GameLite) er
 			rated            BOOLEAN,
 			time_class       TEXT,
 			time_control     TEXT,
-			pgn              TEXT
+			pgn              TEXT,
+			eco              TEXT
 		) ON COMMIT DROP;
 	`)
 	if err != nil {
@@ -93,6 +94,7 @@ func saveGames(ctx context.Context, username string, games []models.GameLite) er
 		"time_class",
 		"time_control",
 		"pgn",
+		"eco",
 	))
 	if err != nil {
 		return err
@@ -111,6 +113,7 @@ func saveGames(ctx context.Context, username string, games []models.GameLite) er
 			g.TimeClass,
 			g.TimeControl,
 			g.PGN,
+			g.ECO,
 		); err != nil {
 			return err
 		}
@@ -137,7 +140,8 @@ func saveGames(ctx context.Context, username string, games []models.GameLite) er
 			rated,
 			time_class,
 			time_control,
-			pgn
+			pgn,
+			eco
 		)
 		SELECT
 			username,
@@ -150,7 +154,8 @@ func saveGames(ctx context.Context, username string, games []models.GameLite) er
 			rated,
 			time_class,
 			time_control,
-			pgn
+			pgn,
+			eco
 		FROM tmp_games
 		ON CONFLICT (username, url) DO NOTHING;
 	`)
@@ -470,6 +475,7 @@ func fetchErrorMovesBatch(ctx context.Context, username string, normalizedFens [
 SELECT
     g.username,
     g.url,
+	g.eco,
     g.when_unix,
     g.color            AS game_color,
     g.opponent,
@@ -521,6 +527,7 @@ ORDER BY m.normalized_fen_before, g.when_unix DESC;
 		var (
 			user        string
 			url         string
+			eco         string
 			whenUnix    int64
 			gameColor   string
 			opponent    string
@@ -550,6 +557,7 @@ ORDER BY m.normalized_fen_before, g.when_unix DESC;
 		if err := rows.Scan(
 			&user,
 			&url,
+			&eco,
 			&whenUnix,
 			&gameColor,
 			&opponent,
@@ -610,6 +618,7 @@ ORDER BY m.normalized_fen_before, g.when_unix DESC;
 				Is_Blunder:    isBlunder,
 			},
 			URL:      url,
+			ECO:      eco,
 			Opponent: opponent,
 		}
 

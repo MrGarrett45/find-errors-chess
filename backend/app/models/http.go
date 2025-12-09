@@ -17,5 +17,6 @@ type Game struct {
 	Rules       string `json:"rules"`
 	White       player `json:"white"`
 	Black       player `json:"black"`
+	ECO         string `json:"eco"`
 	// Some months also include ECO/opening inside PGN tags only; you can parse later.
 }

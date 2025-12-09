@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 type TagSummary struct {
@@ -40,6 +41,7 @@ var (
 	reComments = regexp.MustCompile(`\{[^}]*\}`)       // {...} comments (incl. [%clk ...])
 	reNAG      = regexp.MustCompile(`\$\d+`)           // $1, $2, etc.
 	reSpaces   = regexp.MustCompile(`\s+`)
+	reEcoMoves = regexp.MustCompile(`-\d.*`)
 )
 
 // layout for unix timestamp conversion
@@ -60,6 +62,51 @@ func derivePOV(username string, g models.Game) (color, opponent string, oppRatin
 		return "white", g.Black.Username, g.Black.Rating, g.White.Result
 	}
 	return "black", g.White.Username, g.White.Rating, g.Black.Result
+}
+
+// NormalizeECO turns an ECO URL or slug into a readable opening name without move suffixes.
+func NormalizeECO(ecoURL string) string {
+	ecoURL = strings.TrimSpace(ecoURL)
+	if ecoURL == "" {
+		return ""
+	}
+
+	// Trim to slug after "openings/" or last slash.
+	if idx := strings.LastIndex(ecoURL, "openings/"); idx != -1 {
+		ecoURL = ecoURL[idx+len("openings/"):]
+	} else if idx := strings.LastIndex(ecoURL, "/"); idx != -1 {
+		ecoURL = ecoURL[idx+1:]
+	}
+
+	// Drop query params if any.
+	if idx := strings.Index(ecoURL, "?"); idx != -1 {
+		ecoURL = ecoURL[:idx]
+	}
+
+	// Remove move sequence suffix starting at first "-<digit>"
+	if loc := reEcoMoves.FindStringIndex(ecoURL); loc != nil {
+		ecoURL = ecoURL[:loc[0]]
+	}
+
+	// Replace separators and collapse whitespace.
+	ecoURL = strings.ReplaceAll(ecoURL, "...", " ")
+	ecoURL = strings.ReplaceAll(ecoURL, "-", " ")
+	ecoURL = reSpaces.ReplaceAllString(ecoURL, " ")
+
+	// Drop any trailing tokens that look like move numbers (e.g., "7.h3", "5...Bb6")
+	fields := strings.Fields(ecoURL)
+	for i, tok := range fields {
+		if strings.Contains(tok, "...") {
+			fields = fields[:i]
+			break
+		}
+		if strings.IndexFunc(tok, unicode.IsDigit) != -1 {
+			fields = fields[:i]
+			break
+		}
+	}
+
+	return strings.TrimSpace(strings.Join(fields, " "))
 }
 
 // converts string to int safely
