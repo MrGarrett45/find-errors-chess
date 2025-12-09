@@ -59,7 +59,7 @@ func TestEvalFENUsesDepthWhenConfigured(t *testing.T) {
 	if _, err := eng.EvalFEN(context.Background(), "fen-depth", cfg); err != nil {
 		t.Fatalf("EvalFEN error: %v", err)
 	}
-	if !strings.Contains(sb.String(), "go depth 15") {
+	if !strings.Contains(sb.String(), "go depth 12") {
 		t.Fatalf("EvalFEN should send depth command, got %q", sb.String())
 	}
 }

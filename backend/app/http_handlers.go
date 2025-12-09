@@ -62,7 +62,6 @@ func GetChessGames(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"username": username,
 			"count":    0,
-			"games":    []models.GameLite{},
 		})
 		return
 	}
@@ -105,7 +104,6 @@ func GetChessGames(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"username": username,
 			"count":    0,
-			"games":    []models.GameLite{},
 		})
 		return
 	}
@@ -202,7 +200,6 @@ func GetChessGames(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"username": username,
 		"count":    len(gamesToSave),
-		"games":    gamesToSave,
 		"job_id":   jobID,
 		"batches":  totalBatches,
 	})
