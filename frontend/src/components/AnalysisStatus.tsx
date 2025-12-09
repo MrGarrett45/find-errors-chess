@@ -22,7 +22,7 @@ export function AnalysisStatus({ status, progress, error }: AnalysisStatusProps)
         <ProgressBar progress={progress} status={status} />
         <div className={`status ${status === 'failed' ? 'error' : ''}`}>
           {status === 'starting' && 'Starting analysis…'}
-          {status === 'running' && `Analyzing games (${progress}%)`}
+          {status === 'running' && `Analyzing games (${progress.toFixed(1)}%)`}
           {status === 'completed' && 'Analysis complete!'}
           {status === 'failed' && 'Analysis failed.'}
         </div>
