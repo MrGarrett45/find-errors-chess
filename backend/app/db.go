@@ -681,3 +681,24 @@ func UpdateJobProgress(ctx context.Context, jobID string) error {
 
 	return nil
 }
+
+// FindJobStatus fetches status and batch counts for a job id.
+func FindJobStatus(ctx context.Context, jobID string) (models.JobStatus, error) {
+	var js models.JobStatus
+
+	const q = `
+        SELECT id, status, completed_batches, total_batches
+        FROM jobs
+        WHERE id = $1;
+    `
+
+	row := db.QueryRowContext(ctx, q, jobID)
+	if err := row.Scan(&js.ID, &js.Status, &js.CompletedBatches, &js.TotalBatches); err != nil {
+		if err == sql.ErrNoRows {
+			return models.JobStatus{}, err
+		}
+		return models.JobStatus{}, err
+	}
+
+	return js, nil
+}

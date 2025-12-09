@@ -22,5 +22,6 @@ func main() {
 
 	router.GET("chessgames/:username", app.GetChessGames)
 	router.GET("errors/:username", app.GetErrorPositions)
+	router.GET("jobs/:jobid", app.GetJobStatus)
 	router.Run("0.0.0.0:8080")
 }

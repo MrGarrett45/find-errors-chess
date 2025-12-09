@@ -25,6 +25,7 @@ func init() {
 	// Note the leading "/" (works better with API Gateway paths)
 	router.GET("/chessgames/:username", app.GetChessGames)
 	router.GET("/errors/:username", app.GetErrorPositions)
+	router.GET("jobs/:jobid", app.GetJobStatus)
 
 	// Wrap Gin router with Lambda adapter
 	ginLambda = ginadapter.New(router)

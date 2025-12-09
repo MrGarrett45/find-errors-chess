@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -229,6 +230,32 @@ func GetErrorPositions(c *gin.Context) {
 		"username":  username,
 		"count":     len(positions),
 		"positions": positions,
+	})
+}
+
+// GetJobStatus returns status and batch progress for a job.
+func GetJobStatus(c *gin.Context) {
+	jobID := c.Param("jobid")
+	if jobID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing job id"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	status, err := FindJobStatus(ctx, jobID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "job not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"job": status,
 	})
 }
 
