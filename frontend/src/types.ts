@@ -16,6 +16,7 @@ export type ErrorPosition = {
     MistakeCount: number
     ErrorCount: number
     ErrorRate: number
+    SideToMove: string
   }
   Moves: {
     Move: string

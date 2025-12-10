@@ -56,6 +56,7 @@ type SuboptimalFen struct {
 	MistakeCount        int
 	ErrorCount          int
 	ErrorRate           float64
+	SideToMove          string
 }
 
 //Further details for each bad FEN by game, what move you made, what you should have made, etc

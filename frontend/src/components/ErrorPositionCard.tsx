@@ -16,7 +16,7 @@ export function ErrorPositionCard({ position }: ErrorPositionCardProps) {
             allowDragging: false,
             showNotation: false,
             boardStyle: { borderRadius: 8, boxShadow: '0 4px 18px rgba(0,0,0,0.12)' },
-            //boardOrientation: position.BadFen.SideToMove === 'b' ? 'black' : 'white',
+            boardOrientation: position.BadFen.SideToMove === 'b' ? 'black' : 'white',
           }}
         />
       </div>

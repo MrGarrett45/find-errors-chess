@@ -373,7 +373,8 @@ position_stats AS (
                   OR is_blunder
                 THEN 1 ELSE 0
             END
-        ) AS error_count
+        ) AS error_count,
+        MIN(color) AS side_to_move
     FROM user_moves
     GROUP BY normalized_fen_before
 )
@@ -385,7 +386,8 @@ SELECT
     mistake_count,
     blunder_count,
     error_count,
-    (error_count::float / times_seen) AS error_rate
+    (error_count::float / times_seen) AS error_rate,
+    side_to_move
 FROM position_stats
 WHERE times_seen  >= 3
   AND error_count >= 2
@@ -415,6 +417,7 @@ ORDER BY error_rate DESC, times_seen DESC;
 			&blunderCount,
 			&fen.ErrorCount,
 			&fen.ErrorRate,
+			&fen.SideToMove,
 		); err != nil {
 			return nil, err
 		}
