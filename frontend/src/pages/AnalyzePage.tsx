@@ -1,7 +1,8 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { UsernameForm } from '../components/UsernameForm'
 import { AnalysisStatus } from '../components/AnalysisStatus'
-import type { AnalysisStatusType, JobStatus } from '../types'
+import { ErrorsList } from '../components/ErrorsList'
+import type { AnalysisStatusType, ErrorsResponse, JobStatus } from '../types'
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:8080'
@@ -15,6 +16,9 @@ export function AnalyzePage() {
   const [totalBatches, setTotalBatches] = useState<number | null>(null)
   const [months, setMonths] = useState(3)
   const [limit, setLimit] = useState<number | ''>(200)
+  const [errorsData, setErrorsData] = useState<ErrorsResponse | null>(null)
+  const [errorsLoading, setErrorsLoading] = useState(false)
+  const [errorsError, setErrorsError] = useState<string | null>(null)
   const jobRef = useRef<JobStatus | null>(null)
   const targetProgressRef = useRef(0) // snap-to value from backend
   const rafId = useRef<number | null>(null)
@@ -23,7 +27,7 @@ export function AnalyzePage() {
   const introCopy = useMemo(
     () => ({
       title: 'Analyze your chess openings',
-      desc: 'Kick off an analysis job and track progress as batches complete.',
+      desc: 'Kick off an analysis of your openings. Expect about 15 seconds of analysis for every 100 games',
     }),
     [],
   )
@@ -40,6 +44,8 @@ export function AnalyzePage() {
     setTotalBatches(null)
     jobRef.current = null
     targetProgressRef.current = 0
+    setErrorsData(null)
+    setErrorsError(null)
 
     try {
       const cappedLimit =
@@ -104,6 +110,7 @@ export function AnalyzePage() {
           setStatus('completed')
           setProgress(100)
           stopSmoothing()
+          fetchErrors(username)
         } else if (job.status === 'failed') {
           setStatus('failed')
           setError('Analysis failed')
@@ -177,11 +184,29 @@ export function AnalyzePage() {
     }
   }
 
+  const fetchErrors = async (user: string) => {
+    setErrorsLoading(true)
+    setErrorsError(null)
+    try {
+      const res = await fetch(`${API_BASE}/errors/${encodeURIComponent(user)}`)
+      if (!res.ok) {
+        throw new Error(`Errors request failed (${res.status})`)
+      }
+      const body = (await res.json()) as ErrorsResponse
+      setErrorsData(body)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load errors'
+      setErrorsError(message)
+    } finally {
+      setErrorsLoading(false)
+    }
+  }
+
   return (
     <main className="page">
       <section className="hero">
         <div>
-          <div className="badge">Chess Insights</div>
+          <div className="badge">Theory Gap</div>
           <div className="headline">{introCopy.title}</div>
           <p className="summary">{introCopy.desc}</p>
         </div>
@@ -199,6 +224,9 @@ export function AnalyzePage() {
       </section>
 
       <AnalysisStatus status={status} progress={progress} error={error} />
+      {(status === 'completed' || errorsLoading || errorsError) && (
+        <ErrorsList data={errorsData} isLoading={errorsLoading} error={errorsError} />
+      )}
     </main>
   )
 }
