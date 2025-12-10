@@ -4,5 +4,5 @@ Under development
 
 ToDo:
 1. Add lichess support
-2. Frontend (0 -> 1 Request name, kick off process, track progress)
+2. Figure out how to show SAN notation moves on the frontend, uci is unintuitive for regular players
 3. Add caching so you don't re run stale analysis

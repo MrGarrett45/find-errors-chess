@@ -29,7 +29,7 @@ export function ErrorPositionCard({ position }: ErrorPositionCardProps) {
         <div className="meta">{position.BadFen.TimesSeen} times</div>
       </div>
       <div>
-        <strong>Error rate</strong>
+        <strong>Innacuracy rate</strong>
         <div className="meta">{(position.BadFen.ErrorRate * 100).toFixed(0)}%</div>
       </div>
       {position.Moves.slice(0, 2).map((mv, idx) => (

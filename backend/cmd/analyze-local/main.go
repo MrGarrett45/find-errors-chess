@@ -19,6 +19,6 @@ func main() {
 	app.MustInitDB()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	app.ProcessBatch(ctx, cfg, models.JobMessage{User: "xpertwizard", BatchIndex: 0, NumGames: 200})
+	app.ProcessBatch(ctx, cfg, models.JobMessage{User: "xpertwizard", BatchIndex: 0, NumGames: 300})
 	log.Printf("Took %s", time.Since(start))
 }

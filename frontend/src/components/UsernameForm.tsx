@@ -8,6 +8,7 @@ type UsernameFormProps = {
   limit: number | ''
   onLimitChange: (value: number | '') => void
   onSubmit: (evt: FormEvent) => void
+  onFetchErrors: () => void
   isDisabled: boolean
 }
 
@@ -19,6 +20,7 @@ export function UsernameForm({
   limit,
   onLimitChange,
   onSubmit,
+  onFetchErrors,
   isDisabled,
 }: UsernameFormProps) {
   return (
@@ -78,6 +80,14 @@ export function UsernameForm({
         />
         <button className="button" type="submit" disabled={isDisabled || !username.trim()}>
           {isDisabled ? 'Starting…' : 'Start analysis'}
+        </button>
+        <button
+          className="button"
+          type="button"
+          disabled={!username.trim() || isDisabled}
+          onClick={onFetchErrors}
+        >
+          Fetch errors only
         </button>
       </div>
     </form>

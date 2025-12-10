@@ -9,11 +9,7 @@ type AnalysisStatusProps = {
 
 export function AnalysisStatus({ status, progress, error }: AnalysisStatusProps) {
   if (status === 'idle') {
-    return (
-      <section className="results">
-        <div className="empty">Enter a username to start an analysis.</div>
-      </section>
-    )
+    return null
   }
 
   return (

@@ -219,12 +219,13 @@ export function AnalyzePage() {
           limit={limit}
           onLimitChange={setLimit}
           onSubmit={startAnalysis}
+          onFetchErrors={() => fetchErrors(username)}
           isDisabled={status === 'starting' || status === 'running'}
         />
       </section>
 
       <AnalysisStatus status={status} progress={progress} error={error} />
-      {(status === 'completed' || errorsLoading || errorsError) && (
+      {(status === 'completed' || errorsLoading || errorsError || errorsData) && (
         <ErrorsList data={errorsData} isLoading={errorsLoading} error={errorsError} />
       )}
     </main>
