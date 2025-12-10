@@ -407,14 +407,13 @@ ORDER BY error_rate DESC, times_seen DESC;
 
 	for rows.Next() {
 		var fen models.SuboptimalFen
-		var blunderCount int
 		if err := rows.Scan(
 			&fen.NormalizedFenBefore,
 			&fen.TimesSeen,
 			&fen.SuboptimalCount,
 			&fen.InaccuracyCount,
 			&fen.MistakeCount,
-			&blunderCount,
+			&fen.BlunderCount,
 			&fen.ErrorCount,
 			&fen.ErrorRate,
 			&fen.SideToMove,

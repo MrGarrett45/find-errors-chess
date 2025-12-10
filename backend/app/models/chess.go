@@ -54,6 +54,7 @@ type SuboptimalFen struct {
 	SuboptimalCount     int
 	InaccuracyCount     int
 	MistakeCount        int
+	BlunderCount        int
 	ErrorCount          int
 	ErrorRate           float64
 	SideToMove          string
