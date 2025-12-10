@@ -152,47 +152,56 @@ func GetChessGames(c *gin.Context) {
 	jobID, err := CreateJob(ctx, username, totalGames, batchSize, totalBatches)
 	if err != nil {
 		log.Printf("failed to create job for user=%s: %v", username, err)
-		// you can choose to fail the request here if job creation is critical
-		// for now we just log and continue
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to begin analysis"})
+		return
 	}
 
 	// ---- enqueue SQS jobs with that jobID ----
 
 	if cfg.QueueURL == "" {
-		log.Printf("QUEUE_URL missing in config; skipping enqueue for user=%s", username)
-	} else if jobID == "" {
+		log.Printf("QUEUE_URL missing in config; cannot enqueue for user=%s", username)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to begin analysis"})
+		return
+	}
+	if jobID == "" {
 		log.Printf("jobID empty; skipping enqueue for user=%s", username)
-	} else {
-		awsCfg, err := awsconfig.LoadDefaultConfig(ctx)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to begin analysis"})
+		return
+	}
+
+	awsCfg, err := awsconfig.LoadDefaultConfig(ctx)
+	if err != nil {
+		log.Printf("failed to load AWS config for SQS: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to begin analysis"})
+		return
+	}
+
+	sqsClient := sqs.NewFromConfig(awsCfg)
+	for batchIndex := 0; batchIndex < totalBatches; batchIndex++ {
+		jobMsg := models.JobMessage{
+			User:       username,
+			BatchIndex: batchIndex,
+			NumGames:   batchSize,
+			JobID:      jobID, // <-- UUID from DB
+		}
+
+		body, err := json.Marshal(jobMsg)
 		if err != nil {
-			log.Printf("failed to load AWS config for SQS: %v", err)
-		} else {
-			sqsClient := sqs.NewFromConfig(awsCfg)
+			log.Printf("failed to marshal JobMessage for user=%s batch=%d: %v",
+				username, batchIndex, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to begin analysis"})
+			return
+		}
 
-			for batchIndex := 0; batchIndex < totalBatches; batchIndex++ {
-				jobMsg := models.JobMessage{
-					User:       username,
-					BatchIndex: batchIndex,
-					NumGames:   batchSize,
-					JobID:      jobID, // <-- UUID from DB
-				}
-
-				body, err := json.Marshal(jobMsg)
-				if err != nil {
-					log.Printf("failed to marshal JobMessage for user=%s batch=%d: %v",
-						username, batchIndex, err)
-					continue
-				}
-
-				_, err = sqsClient.SendMessage(ctx, &sqs.SendMessageInput{
-					QueueUrl:    &cfg.QueueURL,
-					MessageBody: aws.String(string(body)),
-				})
-				if err != nil {
-					log.Printf("failed to send SQS message for user=%s batch=%d: %v",
-						username, batchIndex, err)
-				}
-			}
+		_, err = sqsClient.SendMessage(ctx, &sqs.SendMessageInput{
+			QueueUrl:    &cfg.QueueURL,
+			MessageBody: aws.String(string(body)),
+		})
+		if err != nil {
+			log.Printf("failed to send SQS message for user=%s batch=%d: %v",
+				username, batchIndex, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to begin analysis"})
+			return
 		}
 	}
 

@@ -389,7 +389,7 @@ SELECT
 FROM position_stats
 WHERE times_seen  >= 3
   AND error_count >= 2
-ORDER BY times_seen DESC;
+ORDER BY error_rate DESC, times_seen DESC;
 `
 
 	rows, err := db.QueryContext(ctx, fenQuery, username)
