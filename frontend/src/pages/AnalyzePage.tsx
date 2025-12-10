@@ -24,6 +24,26 @@ export function AnalyzePage() {
   const rafId = useRef<number | null>(null)
   const pollId = useRef<number | null>(null)
 
+  const ERROR_CACHE_KEY = 'errorsCache'
+
+  // Restore cached errors (e.g., when returning from position page)
+  useEffect(() => {
+    if (errorsData) return
+    const cached = sessionStorage.getItem(ERROR_CACHE_KEY)
+    if (!cached) return
+    try {
+      const parsed = JSON.parse(cached) as { username: string; data: ErrorsResponse }
+      if (parsed?.data && parsed?.username) {
+        setErrorsData(parsed.data)
+        if (!username) {
+          setUsername(parsed.username)
+        }
+      }
+    } catch {
+      // ignore malformed cache
+    }
+  }, [errorsData, username])
+
   const introCopy = useMemo(
     () => ({
       title: 'Analyze your chess openings',
@@ -46,6 +66,7 @@ export function AnalyzePage() {
     targetProgressRef.current = 0
     setErrorsData(null)
     setErrorsError(null)
+    sessionStorage.removeItem(ERROR_CACHE_KEY)
 
     try {
       const cappedLimit =
@@ -194,6 +215,10 @@ export function AnalyzePage() {
       }
       const body = (await res.json()) as ErrorsResponse
       setErrorsData(body)
+      sessionStorage.setItem(
+        ERROR_CACHE_KEY,
+        JSON.stringify({ username: user, data: body }),
+      )
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load errors'
       setErrorsError(message)

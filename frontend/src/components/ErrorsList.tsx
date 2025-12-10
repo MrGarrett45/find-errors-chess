@@ -43,7 +43,9 @@ export function ErrorsList({ data, isLoading, error }: ErrorsListProps) {
       {data.positions.length === 0 ? (
         <div className="empty">No error positions found.</div>
       ) : (
-        data.positions.map((pos) => <ErrorPositionCard key={pos.BadFen.NormalizedFenBefore} position={pos} />)
+        data.positions.map((pos) => (
+          <ErrorPositionCard key={pos.BadFen.NormalizedFenBefore} position={pos} username={data.username} />
+        ))
       )}
     </section>
   )

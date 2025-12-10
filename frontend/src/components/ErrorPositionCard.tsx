@@ -1,14 +1,21 @@
 import { Chessboard } from 'react-chessboard'
+import { Link } from 'react-router-dom'
 import type { ErrorPosition } from '../types'
 
 type ErrorPositionCardProps = {
   position: ErrorPosition
+  username: string
 }
 
-export function ErrorPositionCard({ position }: ErrorPositionCardProps) {
+function buildPositionId(username: string, fen: string) {
+  return encodeURIComponent(`${username}::${fen}`)
+}
+
+export function ErrorPositionCard({ position, username }: ErrorPositionCardProps) {
+  const linkTo = `/position/${buildPositionId(username, position.BadFen.NormalizedFenBefore)}`
   return (
     <article className="game-card">
-      <div style={{ maxWidth: 320, width: '100%' }}>
+      <Link to={linkTo} style={{ display: 'block', maxWidth: 320, width: '100%' }}>
         <Chessboard
           options={{
             id: `board-${position.BadFen.NormalizedFenBefore}`,
@@ -19,11 +26,13 @@ export function ErrorPositionCard({ position }: ErrorPositionCardProps) {
             boardOrientation: position.BadFen.SideToMove === 'b' ? 'black' : 'white',
           }}
         />
-      </div>
-      <div>
-        <strong>Position</strong>
-        <div className="meta">{position.BadFen.NormalizedFenBefore}</div>
-      </div>
+      </Link>
+      <Link to={linkTo} style={{ textDecoration: 'none' }}>
+        <div>
+          <strong>Position</strong>
+          <div className="meta">{position.BadFen.NormalizedFenBefore}</div>
+        </div>
+      </Link>
       <div>
         <strong>Seen</strong>
         <div className="meta">{position.BadFen.TimesSeen} times</div>
