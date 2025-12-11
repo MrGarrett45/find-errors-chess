@@ -40,12 +40,11 @@ export function PositionPage() {
       <section className="hero">
         <div>
           <div className="badge">Position View</div>
-          <div className="headline">Error position for {username}</div>
-          <p className="summary">Review the FEN and related games for this position.</p>
         </div>
       </section>
 
-      <section className="results">
+      <section className="results" style={{ margin: "auto", maxWidth: 600, width: '100%' }}>
+        <div className="headline">Error position for {username}</div>
           <Chessboard
             options={{
               id: `position-${params.id}`,
