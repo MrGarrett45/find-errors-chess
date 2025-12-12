@@ -30,6 +30,14 @@ export function ErrorsList({ data, isLoading, error }: ErrorsListProps) {
 
   if (!data) return null
 
+  if (!data.positions) {
+    return (
+      <section className="results">
+        <div className="empty">No error positions found.</div>
+      </section>
+    )
+  }
+
   return (
     <section className="results" aria-live="polite">
       <div className="pill-row">

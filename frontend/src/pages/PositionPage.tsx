@@ -1,6 +1,11 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Chessboard } from 'react-chessboard'
+import {
+  Chessboard,
+  type PieceDropHandlerArgs,
+  type SquareHandlerArgs,
+} from 'react-chessboard'
+import { Chess } from 'chess.js'
 
 function decodeId(id: string): { username: string; fen: string } | null {
   try {
@@ -19,6 +24,29 @@ export function PositionPage() {
   const params = useParams<{ id: string }>()
   const navigate = useNavigate()
   const decoded = useMemo(() => (params.id ? decodeId(params.id) : null), [params.id])
+  const [game, setGame] = useState<Chess | null>(null)
+  const rawId = params.id ?? 'board'
+  const safeId = `position-${rawId.replace(/[^a-zA-Z0-9_-]/g, '_')}`
+
+  // square selected for click-to-move
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
+
+  // Initialize chess.js from the FEN in the URL
+  useEffect(() => {
+    if (!decoded?.fen) return
+
+    const g = new Chess()
+    try {
+      g.load(decoded.fen) // starting position is your error FEN
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setGame(g)
+      setSelectedSquare(null)
+    } catch (e) {
+      console.error('Invalid FEN:', e)
+      setGame(null)
+      setSelectedSquare(null)
+    }
+  }, [decoded?.fen])
 
   if (!decoded) {
     return (
@@ -35,6 +63,77 @@ export function PositionPage() {
 
   const { username, fen } = decoded
 
+  // Shared move helper used by both drag and click
+  const makeMove = (from: string, to: string): boolean => {
+    if (!game) return false
+
+    const gameCopy = new Chess(game.fen())
+
+    const move = gameCopy.move({
+      from,
+      to,
+      promotion: 'q', // always promote to queen for simplicity
+    })
+
+    if (move === null) {
+      return false
+    }
+
+    setGame(gameCopy)
+    return true
+  }
+
+  // Drag-to-move
+  const handlePieceDrop = ({ sourceSquare, targetSquare }: PieceDropHandlerArgs): boolean => {
+    if (!targetSquare) return false
+    const moved = makeMove(sourceSquare, targetSquare)
+    if (moved) {
+      setSelectedSquare(null)
+    }
+    return moved
+  }
+
+  // Click-to-move
+  // Be defensive: runtime may pass a string ('e4') or an object ({ square: 'e4' })
+  const handleSquareClick = (arg: SquareHandlerArgs | string) => {
+    if (!game) return
+
+    const square = typeof arg === 'string' ? arg : arg.square
+    if (!square) return
+
+    // No selection yet → select this square
+    if (!selectedSquare) {
+      setSelectedSquare(square)
+      return
+    }
+
+    // Click same square again → deselect
+    if (selectedSquare === square) {
+      setSelectedSquare(null)
+      return
+    }
+
+    // Try move selectedSquare -> clicked square
+    const moved = makeMove(selectedSquare, square)
+    if (moved) {
+      setSelectedSquare(null)
+      return
+    }
+
+    // If move illegal, treat clicked square as new selection
+    setSelectedSquare(square)
+  }
+
+  const currentFen = game ? game.fen() : fen
+
+  // Optional: highlight selected square
+  const squareStyles: Record<string, React.CSSProperties> = {}
+  if (selectedSquare) {
+    squareStyles[selectedSquare] = {
+      boxShadow: 'inset 0 0 0 3px rgba(255, 215, 0, 0.9)',
+    }
+  }
+
   return (
     <main className="page">
       <section className="hero">
@@ -43,21 +142,35 @@ export function PositionPage() {
         </div>
       </section>
 
-      <section className="results" style={{ margin: "auto", maxWidth: 600, width: '100%' }}>
+      <section
+        className="results"
+        style={{ margin: 'auto', maxWidth: 600, width: '100%' }}
+      >
         <div className="headline">Error position for {username}</div>
-          <Chessboard
-            options={{
-              id: `position-${params.id}`,
-              position: fen,
-              allowDragging: true,
-              showNotation: true,
-              boardStyle: { borderRadius: 8, boxShadow: '0 4px 18px rgba(0,0,0,0.12)' },
-            }}
-          />
-          <div className="meta" style={{ marginTop: 12, wordBreak: 'break-all' }}>
-            {fen}
-          </div>
-        <button className="button" type="button" onClick={() => navigate(-1)} style={{ marginTop: 12 }}>
+        <Chessboard
+          options={{
+            id: `position-${safeId}`,
+            position: currentFen,
+            allowDragging: true,
+            showNotation: true,
+            boardStyle: {
+              borderRadius: 8,
+              boxShadow: '0 4px 18px rgba(0, 0, 0, 0.12)',
+            },
+            squareStyles, // highlight selected square
+            onPieceDrop: handlePieceDrop,
+            onSquareClick: handleSquareClick,
+          }}
+        />
+        <div className="meta" style={{ marginTop: 12, wordBreak: 'break-all' }}>
+          {currentFen}
+        </div>
+        <button
+          className="button"
+          type="button"
+          onClick={() => navigate(-1)}
+          style={{ marginTop: 12 }}
+        >
           Back
         </button>
       </section>
