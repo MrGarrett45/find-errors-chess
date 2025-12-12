@@ -6,6 +6,7 @@ import {
   type SquareHandlerArgs,
 } from 'react-chessboard'
 import { Chess } from 'chess.js'
+import { StockfishPanel } from '../components/StockfishPanel'
 
 function decodeId(id: string): { username: string; fen: string } | null {
   try {
@@ -142,28 +143,29 @@ export function PositionPage() {
         </div>
       </section>
 
-      <section
-        className="results"
-        style={{ margin: 'auto', maxWidth: 600, width: '100%' }}
-      >
+      <section className="results position-results" style={{ margin: 'auto', width: '100%' }}>
         <div className="headline">Error position for {username}</div>
-        <Chessboard
-          options={{
-            id: `position-${safeId}`,
-            position: currentFen,
-            allowDragging: true,
-            showNotation: true,
-            boardStyle: {
-              borderRadius: 8,
-              boxShadow: '0 4px 18px rgba(0, 0, 0, 0.12)',
-            },
-            squareStyles, // highlight selected square
-            onPieceDrop: handlePieceDrop,
-            onSquareClick: handleSquareClick,
-          }}
-        />
-        <div className="meta" style={{ marginTop: 12, wordBreak: 'break-all' }}>
-          {currentFen}
+        <div className="board-grid">
+          <div className="panel board-panel">
+            <Chessboard
+              options={{
+                id: `position-${safeId}`,
+                position: currentFen,
+                allowDragging: true,
+                showNotation: true,
+                boardStyle: {
+                  borderRadius: 8,
+                  boxShadow: '0 4px 18px rgba(0, 0, 0, 0.12)',
+                },
+                squareStyles, // highlight selected square
+                onPieceDrop: handlePieceDrop,
+                onSquareClick: handleSquareClick,
+              }}
+            />
+            <div className="meta board-fen">{currentFen}</div>
+          </div>
+
+          <StockfishPanel fen={currentFen} />
         </div>
         <button
           className="button"

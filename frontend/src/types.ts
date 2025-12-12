@@ -35,3 +35,15 @@ export type ErrorsResponse = {
   count: number
   positions: ErrorPosition[]
 }
+
+export type EngineScore = { type: 'cp'; value: number } | { type: 'mate'; value: number }
+
+export type EngineLine = {
+  multipv: number
+  depth: number
+  pv: string[]
+  san: string[]
+  score: EngineScore | null
+  nodes?: number
+  nps?: number
+}

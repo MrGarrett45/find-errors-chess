@@ -145,6 +145,83 @@
   display: grid;
   gap: 14px;
 }
+.position-results {
+  gap: 18px;
+}
+
+.board-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.board-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.board-fen {
+  margin-top: 4px;
+  word-break: break-word;
+}
+
+.engine-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.engine-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.engine-panel__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1b1f36;
+  margin-top: 6px;
+}
+
+.engine-lines {
+  display: grid;
+  gap: 10px;
+}
+
+.engine-line {
+  border: 1px solid #e5e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #f7f8ff, #ffffff);
+  box-shadow: 0 6px 18px rgba(64, 76, 255, 0.04);
+}
+
+.engine-line__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #1b1f36;
+  font-weight: 700;
+}
+
+.engine-line__score {
+  font-size: 18px;
+}
+
+.engine-line__depth {
+  color: #4a4f64;
+  font-weight: 600;
+}
+
+.engine-line__pv {
+  margin-top: 6px;
+  color: #1b1f36;
+  line-height: 1.4;
+  word-break: break-word;
+}
 
 .pill-row {
   display: flex;
@@ -192,5 +269,11 @@
 @media (max-width: 640px) {
   .page {
     padding: 32px 18px;
+  }
+}
+
+@media (max-width: 960px) {
+  .board-grid {
+    grid-template-columns: 1fr;
   }
 }
