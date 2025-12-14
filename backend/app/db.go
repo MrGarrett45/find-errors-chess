@@ -240,6 +240,7 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 			fen_before		  TEXT,
 			fen_after		  TEXT,
 			move_uci          TEXT,
+			move_san          TEXT,
 			color             CHAR(1),
 			eval_before_cp       INT,
 			eval_after_cp     INT,
@@ -265,7 +266,7 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 	stmt, err := tx.PrepareContext(ctx, pq.CopyIn(
 		"tmp_moves",
 		"game_id", "ply", "move_number", "fen_before", "fen_after",
-		"move_uci", "color",
+		"move_uci", "move_san", "color",
 		"eval_depth", "eval_time",
 		"eval_before_cp", "eval_after_cp",
 		"eval_before_mate", "eval_after_mate",
@@ -286,7 +287,8 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 				e.MoveNumber,
 				e.FenBefore.FEN,
 				e.FenAfter.FEN,
-				e.Move,
+				e.MoveUCI,
+				e.MoveSAN,
 				e.Color,
 				cfg.Engine.Depth,
 				cfg.Engine.MoveTime,
@@ -317,14 +319,14 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO moves (
 			game_id, ply, move_number, fen_before,
-			fen_after, move_uci, color,
+			fen_after, move_uci, move_san, color,
 			eval_depth, eval_time, eval_before_cp,
 			eval_after_cp, eval_before_mate, eval_after_mate, centipawn_change, best_move_uci, is_inaccuracy, is_mistake, is_blunder,
 			is_suboptimal, normalized_fen_before, played_by
 		)
 		SELECT
 			game_id, ply, move_number, fen_before,
-			fen_after, move_uci, color,
+			fen_after, move_uci, move_san, color,
 			eval_depth, eval_time, eval_before_cp,
 			eval_after_cp, eval_before_mate, eval_after_mate, centipawn_change, best_move_uci, is_inaccuracy, is_mistake, is_blunder,
 			is_suboptimal, normalized_fen_before, played_by
@@ -598,7 +600,8 @@ ORDER BY m.normalized_fen_before, g.when_unix DESC;
 		_ = evalAfterCP
 
 		mv := models.Move{
-			Move:       playedMoveUCI,
+			MoveUCI:    playedMoveUCI,
+			MoveSAN:    moveSAN.String,
 			PlayedBy:   user,
 			MoveNumber: moveNumber,
 			Ply:        ply,

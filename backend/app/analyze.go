@@ -29,10 +29,11 @@ func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config, userna
 	if err := g.UnmarshalText([]byte(meta.PGN)); err != nil {
 		return []models.Move{}, err
 	}
+	positions := g.Positions()
 
 	// Collect FEN snapshots of each position
 	var fens []models.FENEval
-	for i, p := range g.Positions() {
+	for i, p := range positions {
 		if i >= cfg.Engine.NumMoves {
 			break
 		}
@@ -59,6 +60,7 @@ func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config, userna
 		if i >= cfg.Engine.NumMoves {
 			break
 		}
+
 		color := "w"
 		if !IsEven(i) {
 			color = "b"
@@ -79,8 +81,24 @@ func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config, userna
 			fenAfter = models.FENEval{}
 		}
 
+		uciStr := chess.UCINotation{}.Encode(nil, m)
+		sanStr := ""
+		if i < len(positions) {
+			sanStr = chess.AlgebraicNotation{}.Encode(positions[i], m)
+		}
+
 		moveAnalysis := GetMoveAnalysis(color, fens[i], fenAfter)
-		moves = append(moves, models.Move{Move: m.String(), PlayedBy: playedBy, FenBefore: fens[i], FenAfter: fenAfter, MoveNumber: moveNumber, Ply: i + 1, Color: color, Analysis: moveAnalysis})
+		moves = append(moves, models.Move{
+			MoveUCI:    uciStr,
+			MoveSAN:    sanStr,
+			PlayedBy:   playedBy,
+			FenBefore:  fens[i],
+			FenAfter:   fenAfter,
+			MoveNumber: moveNumber,
+			Ply:        i + 1,
+			Color:      color,
+			Analysis:   moveAnalysis,
+		})
 	}
 
 	return moves, nil

@@ -19,7 +19,8 @@ export type ErrorPosition = {
     SideToMove: string
   }
   Moves: {
-    Move: string
+    MoveUCI: string
+    MoveSAN: string
     PlayedBy: string
     MoveNumber: number
     Ply: number

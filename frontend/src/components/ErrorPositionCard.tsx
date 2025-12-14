@@ -45,8 +45,8 @@ export function ErrorPositionCard({ position, username }: ErrorPositionCardProps
         <div key={mv.URL + idx}>
           <strong>Example {idx + 1}</strong>
           <div className="meta">
-            {mv.Color} played {mv.Move} vs {mv.Opponent}
-            {mv.ECO ? ` · ${mv.ECO}` : ''}
+            {mv.Color} played {mv.MoveSAN || '-'} vs {mv.Opponent}
+            {mv.ECO ? ` ${mv.ECO} ` : ''}
           </div>
           <a
             href={mv.URL}

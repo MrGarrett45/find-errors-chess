@@ -18,7 +18,8 @@ type GameLite struct {
 }
 
 type Move struct {
-	Move       string
+	MoveUCI    string
+	MoveSAN    string
 	PlayedBy   string
 	MoveNumber int
 	Ply        int
@@ -47,7 +48,7 @@ type MoveAnalysis struct {
 	Is_Blunder    bool
 }
 
-//FENs where you've made a bad move and how many times you've done it
+// FENs where you've made a bad move and how many times you've done it
 type SuboptimalFen struct {
 	NormalizedFenBefore string
 	TimesSeen           int
@@ -60,7 +61,7 @@ type SuboptimalFen struct {
 	SideToMove          string
 }
 
-//Further details for each bad FEN by game, what move you made, what you should have made, etc
+// Further details for each bad FEN by game, what move you made, what you should have made, etc
 type SuboptimalFensReport struct {
 	BadFen SuboptimalFen
 	Moves  []Move

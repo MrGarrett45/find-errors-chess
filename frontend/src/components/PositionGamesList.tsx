@@ -45,7 +45,7 @@ export function PositionGamesList({ position, isLoading, error }: PositionGamesL
             <div className="engine-line__meta">
               <span className="pill">{mv.Color === 'w' ? 'White' : 'Black'}</span>
               <span className="engine-line__depth">Move {mv.MoveNumber}</span>
-              <span className="engine-line__score">Your Move: {mv.Move}</span>
+              <span className="engine-line__score">Your Move: {mv.MoveSAN || '-'}</span>
             </div>
             <div
               className="engine-line__pv"
