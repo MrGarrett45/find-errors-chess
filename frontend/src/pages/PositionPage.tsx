@@ -39,6 +39,8 @@ export function PositionPage() {
   const [errorsData, setErrorsData] = useState<ErrorsResponse | null>(null)
   const [errorsLoading, setErrorsLoading] = useState(false)
   const [errorsError, setErrorsError] = useState<string | null>(null)
+  const [fenHistory, setFenHistory] = useState<string[]>([])
+  const [historyIndex, setHistoryIndex] = useState(0)
 
   // Initialize chess.js from the FEN in the URL
   useEffect(() => {
@@ -49,6 +51,8 @@ export function PositionPage() {
       g.load(decoded.fen) // starting position is your error FEN
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setGame(g)
+      setFenHistory([g.fen()])
+      setHistoryIndex(0)
       setSelectedSquare(null)
     } catch (e) {
       console.error('Invalid FEN:', e)
@@ -77,6 +81,13 @@ export function PositionPage() {
     }
 
     setGame(gameCopy)
+    // push into history, truncating any "future" states
+    setFenHistory((prev) => {
+      const base = prev.slice(0, historyIndex + 1)
+      const next = [...base, gameCopy.fen()]
+      setHistoryIndex(next.length - 1)
+      return next
+    })
     return true
   }
 
@@ -122,6 +133,70 @@ export function PositionPage() {
   }
 
   const currentFen = game ? game.fen() : initialFen
+  const canStepBack = historyIndex > 0
+  const canStepForward = historyIndex < fenHistory.length - 1
+  const canReset = historyIndex !== 0 && fenHistory.length > 0
+
+  const stepBack = () => {
+    if (!canStepBack) return
+    setHistoryIndex((idx) => {
+      const next = Math.max(0, idx - 1)
+      const fen = fenHistory[next]
+      if (fen) {
+        const g = new Chess(fen)
+        setGame(g)
+        setSelectedSquare(null)
+      }
+      return next
+    })
+  }
+
+  const stepForward = () => {
+    if (!canStepForward) return
+    setHistoryIndex((idx) => {
+      const next = Math.min(fenHistory.length - 1, idx + 1)
+      const fen = fenHistory[next]
+      if (fen) {
+        const g = new Chess(fen)
+        setGame(g)
+        setSelectedSquare(null)
+      }
+      return next
+    })
+  }
+
+  const resetPosition = () => {
+    if (!canReset || !fenHistory[0]) return
+    const g = new Chess(fenHistory[0])
+    setGame(g)
+    setSelectedSquare(null)
+    setHistoryIndex(0)
+  }
+
+  // Keyboard navigation: left/right undo-redo, up resets to original FEN
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return
+      }
+      if (!fenHistory.length) return
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        stepBack()
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        stepForward()
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        resetPosition()
+      }
+    }
+
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [fenHistory])
 
   useEffect(() => {
     const fetchErrors = async () => {
@@ -210,6 +285,17 @@ export function PositionPage() {
               }}
             />
             <div className="meta board-fen">{currentFen}</div>
+            <div className="button-row" style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button className="button" type="button" onClick={stepBack} disabled={!canStepBack}>
+                ⬅ Previous
+              </button>
+              <button className="button" type="button" onClick={stepForward} disabled={!canStepForward}>
+                Next ➡
+              </button>
+              <button className="button" type="button" onClick={resetPosition} disabled={!canReset}>
+                Reset ↩
+              </button>
+            </div>
           </div>
 
           <StockfishPanel fen={currentFen} />
