@@ -204,6 +204,7 @@ export function PositionPage() {
                   boxShadow: '0 4px 18px rgba(0, 0, 0, 0.12)',
                 },
                 squareStyles, // highlight selected square
+                boardOrientation: matchedPosition?.BadFen.SideToMove === 'b' ? 'black' : 'white',
                 onPieceDrop: handlePieceDrop,
                 onSquareClick: handleSquareClick,
               }}
