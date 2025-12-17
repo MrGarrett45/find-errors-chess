@@ -218,7 +218,7 @@ func ProcessBatch(ctx context.Context, cfg *config.Config, job models.JobMessage
 	offset := job.BatchIndex * job.NumGames
 
 	log.Printf(
-		"Processing batch: user=%s job_id= %s batch_index=%d num_games=%d offset=%d workers=%s, use_depth=%t, engine_depth=%d, engine_move_time=%s",
+		"Processing batch: user=%s job_id= %s batch_index=%d num_games=%d offset=%d workers=%s, use_depth=%t, engine_depth=%d, engine_move_time=%d",
 		job.User, job.JobID, job.BatchIndex, job.NumGames, offset, os.Getenv("WORKERS"), settings.UseDepth, settings.Depth, settings.MoveTimeMS,
 	)
 
