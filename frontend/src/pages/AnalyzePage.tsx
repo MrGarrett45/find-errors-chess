@@ -15,7 +15,10 @@ export function AnalyzePage() {
   const [error, setError] = useState<string | null>(null)
   const [totalBatches, setTotalBatches] = useState<number | null>(null)
   const [months, setMonths] = useState(3)
-  const [limit, setLimit] = useState<number | ''>(200)
+  const [limit, setLimit] = useState<number | ''>(100)
+  const [engineDepth, setEngineDepth] = useState<number | ''>(12)
+  const [engineMoveTime, setEngineMoveTime] = useState<number | ''>(50)
+  const [engineUseDepth, setEngineUseDepth] = useState(false)
   const [errorsData, setErrorsData] = useState<ErrorsResponse | null>(null)
   const [errorsLoading, setErrorsLoading] = useState(false)
   const [errorsError, setErrorsError] = useState<string | null>(null)
@@ -25,6 +28,16 @@ export function AnalyzePage() {
   const pollId = useRef<number | null>(null)
 
   const ERROR_CACHE_KEY = 'errorsCache'
+  const depthVal = typeof engineDepth === 'number' ? engineDepth : NaN
+  const moveTimeVal = typeof engineMoveTime === 'number' ? engineMoveTime : NaN
+  const depthValid = depthVal >= 1 && depthVal <= 25
+  const moveTimeValid = moveTimeVal >= 0 && moveTimeVal <= 1000
+  const submitDisabled =
+    status === 'starting' ||
+    status === 'running' ||
+    !username.trim() ||
+    !depthValid ||
+    !moveTimeValid
 
   // Restore cached errors (e.g., when returning from position page)
   useEffect(() => {
@@ -57,6 +70,11 @@ export function AnalyzePage() {
     const user = username.trim()
     if (!user) return
 
+    if (!depthValid || !moveTimeValid) {
+      setError('Please enter a depth (1-25) and movetime (0-1000ms).')
+      return
+    }
+
     setStatus('starting')
     setError(null)
     setProgress(0)
@@ -71,8 +89,15 @@ export function AnalyzePage() {
     try {
       const cappedLimit =
         typeof limit === 'number' ? Math.max(1, Math.min(limit, 500)) : 200
+      const params = new URLSearchParams({
+        months: String(months),
+        limit: String(cappedLimit),
+        engine_depth: String(depthVal),
+        engine_move_time: String(moveTimeVal),
+        engine_depth_or_time: String(engineUseDepth),
+      })
       const res = await fetch(
-        `${API_BASE}/chessgames/${encodeURIComponent(user)}?months=${months}&limit=${cappedLimit}`,
+        `${API_BASE}/chessgames/${encodeURIComponent(user)}?${params.toString()}`,
       )
       if (!res.ok) {
         throw new Error(`Failed to start analysis (status ${res.status})`)
@@ -243,9 +268,16 @@ export function AnalyzePage() {
           onMonthsChange={setMonths}
           limit={limit}
           onLimitChange={setLimit}
+          engineDepth={engineDepth}
+          onEngineDepthChange={setEngineDepth}
+          engineMoveTime={engineMoveTime}
+          onEngineMoveTimeChange={setEngineMoveTime}
+          engineUseDepth={engineUseDepth}
+          onEngineUseDepthChange={setEngineUseDepth}
           onSubmit={startAnalysis}
           onFetchErrors={() => fetchErrors(username)}
-          isDisabled={status === 'starting' || status === 'running'}
+          isSubmitDisabled={submitDisabled}
+          isFetchDisabled={status === 'starting' || status === 'running'}
         />
       </section>
 

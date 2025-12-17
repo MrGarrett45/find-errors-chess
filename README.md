@@ -9,3 +9,6 @@ ToDo:
 4. Give users options for how they want to run analysis (time, depth, etc)
 5. Auth
 6. Stripe
+7. Get custom domain
+8. Differentiate on frontend between blunder/suboptimal/etc
+9. Figure out why /errors is getting called too often on position page (seems resolved)

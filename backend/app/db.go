@@ -220,7 +220,7 @@ func LoadGames(ctx context.Context, username string, limit, offset int) ([]model
 	return out, nil
 }
 
-func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite) error {
+func SaveMoves(ctx context.Context, games []models.GameLite, settings models.EngineSettings) error {
 	if db == nil {
 		// Allow test runs without a backing DB.
 		return nil
@@ -290,8 +290,8 @@ func SaveMoves(ctx context.Context, cfg *config.Config, games []models.GameLite)
 				e.MoveUCI,
 				e.MoveSAN,
 				e.Color,
-				cfg.Engine.Depth,
-				cfg.Engine.MoveTime,
+				settings.Depth,
+				settings.MoveTimeMS,
 				e.FenBefore.Score.CP,
 				e.FenAfter.Score.CP,
 				e.FenBefore.Score.Mate,

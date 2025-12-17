@@ -63,6 +63,7 @@
 .input-group {
   display: grid;
   gap: 12px;
+  position: relative;
 }
 
 .label-row {
@@ -99,6 +100,36 @@
   align-items: center;
   justify-content: flex-start;
   flex-wrap: wrap;
+}
+
+.controls-with-popover {
+  position: relative;
+}
+
+.engine-settings-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 140ms ease, transform 140ms ease;
+  z-index: 5;
+}
+
+.engine-settings-popover.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.engine-settings-surface {
+  background: #fff;
+  border: 1px solid #e5e8f0;
+  border-radius: 12px;
+  box-shadow: 0 16px 36px rgba(23, 28, 38, 0.14);
+  padding: 14px;
 }
 
 .button {

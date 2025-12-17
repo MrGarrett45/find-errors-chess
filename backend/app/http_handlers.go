@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 
 	"net/http"
 	"strings"
@@ -116,6 +117,22 @@ func GetChessGames(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load config"})
 		return
 	}
+	engineSettings := models.EngineSettings{}
+	if v := c.Query("engine_depth"); v != "" {
+		if d, err := parsePositiveInt(v); err == nil {
+			engineSettings.Depth = d
+		}
+	}
+	if v := c.Query("engine_move_time"); v != "" {
+		if mt, err := parsePositiveInt(v); err == nil {
+			engineSettings.MoveTimeMS = mt
+		}
+	}
+	if v := c.Query("engine_depth_or_time"); v != "" {
+		if useDepth, err := strconv.ParseBool(v); err == nil {
+			engineSettings.UseDepth = useDepth
+		}
+	}
 
 	// How many games do we keep/save from this endpoint?
 	limit := 0
@@ -179,10 +196,13 @@ func GetChessGames(c *gin.Context) {
 	sqsClient := sqs.NewFromConfig(awsCfg)
 	for batchIndex := 0; batchIndex < totalBatches; batchIndex++ {
 		jobMsg := models.JobMessage{
-			User:       username,
-			BatchIndex: batchIndex,
-			NumGames:   batchSize,
-			JobID:      jobID, // <-- UUID from DB
+			User:           username,
+			BatchIndex:     batchIndex,
+			NumGames:       batchSize,
+			JobID:          jobID, // <-- UUID from DB
+			EngineDepth:    engineSettings.Depth,
+			EngineMoveTime: engineSettings.MoveTimeMS,
+			EngineUseDepth: engineSettings.UseDepth,
 		}
 
 		body, err := json.Marshal(jobMsg)

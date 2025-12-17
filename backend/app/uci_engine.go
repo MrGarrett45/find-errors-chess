@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"example/my-go-api/app/config"
 	"example/my-go-api/app/models"
 	"fmt"
 	"os/exec"
@@ -93,7 +92,7 @@ func (e *UCIEngine) NewGame() error {
 
 // EvalFEN evaluates one position. Use either a fixed depth or movetime.
 // For beginners, movetime is simple and predictable across hardware.
-func (e *UCIEngine) EvalFEN(ctx context.Context, fen string, cfg *config.Config) (models.UCIScore, error) {
+func (e *UCIEngine) EvalFEN(ctx context.Context, fen string, settings models.EngineSettings) (models.UCIScore, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -106,9 +105,9 @@ func (e *UCIEngine) EvalFEN(ctx context.Context, fen string, cfg *config.Config)
 		return models.UCIScore{}, err
 	}
 
-	if cfg.Engine.DepthOrTime {
+	if settings.UseDepth {
 		// Analyze using depth
-		depth := cfg.Engine.Depth
+		depth := settings.Depth
 		if depth <= 0 {
 			depth = 12
 		}
@@ -117,7 +116,11 @@ func (e *UCIEngine) EvalFEN(ctx context.Context, fen string, cfg *config.Config)
 		}
 	} else {
 		//analyze using movetime
-		if err := e.send(fmt.Sprintf("go movetime %d", cfg.Engine.MoveTime)); err != nil {
+		moveTime := settings.MoveTimeMS
+		if moveTime <= 0 {
+			moveTime = 75
+		}
+		if err := e.send(fmt.Sprintf("go movetime %d", moveTime)); err != nil {
 			return models.UCIScore{}, err
 		}
 	}

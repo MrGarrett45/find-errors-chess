@@ -23,7 +23,7 @@ const (
 	OpeningInaccuracyThreshold = 30
 )
 
-func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config, username string) ([]models.Move, error) {
+func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config, username string, settings models.EngineSettings) ([]models.Move, error) {
 	// Parse PGN into new game
 	g := chess.NewGame()
 	if err := g.UnmarshalText([]byte(meta.PGN)); err != nil {
@@ -50,7 +50,7 @@ func AnalyzePGN(meta models.GameLite, eng *UCIEngine, cfg *config.Config, userna
 	ctx := context.Background()
 	for i := range fens {
 		c2, cancel := context.WithTimeout(ctx, 2*time.Second)
-		score, _ := eng.EvalFEN(c2, fens[i].FEN, cfg)
+		score, _ := eng.EvalFEN(c2, fens[i].FEN, settings)
 		cancel()
 		fens[i].Score = score
 	}
@@ -128,12 +128,12 @@ func fenInfoFromPosition(pos *chess.Position) models.FENEval {
 }
 
 // What we let our workers call to process games
-func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite, username string) (models.GameLite, error) {
+func AnalyzeOneGame(cfg *config.Config, eng *UCIEngine, g models.GameLite, username string, settings models.EngineSettings) (models.GameLite, error) {
 	log.Printf("Analyzing game: %s vs %s (%s)", username, g.Opponent, g.URL)
 
 	g.PGN = NormalizeChessDotComPGN(g.PGN)
 
-	moves, err := AnalyzePGN(g, eng, cfg, username)
+	moves, err := AnalyzePGN(g, eng, cfg, username, settings)
 	if err != nil {
 		return models.GameLite{}, err
 	}
@@ -203,6 +203,17 @@ func GetMoveAnalysis(color string, before, after models.FENEval) models.MoveAnal
 // processBatch contains your old main logic for a single batch.
 func ProcessBatch(ctx context.Context, cfg *config.Config, job models.JobMessage) error {
 	start := time.Now()
+	settings := models.EngineSettings{
+		Depth:      job.EngineDepth,
+		MoveTimeMS: job.EngineMoveTime,
+		UseDepth:   job.EngineUseDepth,
+	}
+	if settings.UseDepth && settings.Depth <= 0 {
+		settings.Depth = 12
+	}
+	if !settings.UseDepth && settings.MoveTimeMS <= 0 {
+		settings.MoveTimeMS = 75
+	}
 
 	offset := job.BatchIndex * job.NumGames
 
@@ -242,7 +253,7 @@ func ProcessBatch(ctx context.Context, cfg *config.Config, job models.JobMessage
 			_ = eng.NewGame()
 
 			for g := range jobs {
-				if report, err := AnalyzeOneGame(cfg, eng, g, job.User); err != nil {
+				if report, err := AnalyzeOneGame(cfg, eng, g, job.User, settings); err != nil {
 					log.Printf("worker %d: error analyzing game %s: %v", id, g.URL, err)
 				} else {
 					results <- report
@@ -274,7 +285,7 @@ func ProcessBatch(ctx context.Context, cfg *config.Config, job models.JobMessage
 	ctx2, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
-	if err := SaveMoves(ctx2, cfg, allResults); err != nil {
+	if err := SaveMoves(ctx2, allResults, settings); err != nil {
 		log.Printf("SaveMoves failed for user=%s batch_index=%d: %v", job.User, job.BatchIndex, err)
 		return err
 	}

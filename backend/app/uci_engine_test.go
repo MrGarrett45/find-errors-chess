@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"example/my-go-api/app/config"
+	"example/my-go-api/app/models"
 )
 
 func newTestEngine(outputLines []string) (*UCIEngine, *strings.Builder) {
@@ -35,8 +35,7 @@ func TestEvalFENUsesMovetimeAndParsesScore(t *testing.T) {
 		"bestmove e2e4",
 	})
 
-	cfg := &config.Config{Engine: config.EngineConfig{DepthOrTime: false, MoveTime: 75}}
-	score, err := eng.EvalFEN(context.Background(), "test-fen", cfg)
+	score, err := eng.EvalFEN(context.Background(), "test-fen", models.EngineSettings{UseDepth: false, MoveTimeMS: 75})
 	if err != nil {
 		t.Fatalf("EvalFEN error: %v", err)
 	}
@@ -55,8 +54,7 @@ func TestEvalFENUsesMovetimeAndParsesScore(t *testing.T) {
 
 func TestEvalFENUsesDepthWhenConfigured(t *testing.T) {
 	eng, sb := newTestEngine([]string{"bestmove e2e4"})
-	cfg := &config.Config{Engine: config.EngineConfig{DepthOrTime: true}}
-	if _, err := eng.EvalFEN(context.Background(), "fen-depth", cfg); err != nil {
+	if _, err := eng.EvalFEN(context.Background(), "fen-depth", models.EngineSettings{UseDepth: true, Depth: 12}); err != nil {
 		t.Fatalf("EvalFEN error: %v", err)
 	}
 	if !strings.Contains(sb.String(), "go depth 12") {
@@ -66,8 +64,7 @@ func TestEvalFENUsesDepthWhenConfigured(t *testing.T) {
 
 func TestEvalFENNotReady(t *testing.T) {
 	eng := &UCIEngine{}
-	cfg := &config.Config{Engine: config.EngineConfig{MoveTime: 10}}
-	if _, err := eng.EvalFEN(context.Background(), "fen", cfg); err == nil {
+	if _, err := eng.EvalFEN(context.Background(), "fen", models.EngineSettings{MoveTimeMS: 10}); err == nil {
 		t.Fatalf("EvalFEN should fail when engine not ready")
 	}
 }
