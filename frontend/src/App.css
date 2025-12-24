@@ -318,3 +318,152 @@
     grid-template-columns: 1fr;
   }
 }
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+}
+
+.app-header {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e8f0;
+  border-radius: 16px;
+  padding: 12px 16px;
+  box-shadow: 0 10px 30px rgba(23, 28, 38, 0.08);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 6px 16px rgba(64, 76, 255, 0.2);
+}
+
+.app-title {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1b1f36;
+}
+
+.app-subtitle {
+  font-size: 13px;
+  color: #5b6075;
+}
+
+.app-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.auth-hero {
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.auth-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  object-fit: cover;
+  box-shadow: 0 12px 30px rgba(64, 76, 255, 0.25);
+  margin-bottom: 16px;
+}
+
+.auth-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 260px;
+}
+
+.auth-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1b1f36;
+}
+
+.auth-copy {
+  color: #4a4f64;
+  font-size: 14px;
+}
+
+.auth-button {
+  justify-content: center;
+  width: 100%;
+}
+
+.button--ghost {
+  background: #f6f8ff;
+  color: #2f365f;
+  border: 1px solid #d8dbe6;
+  box-shadow: none;
+}
+
+.button--ghost:hover {
+  box-shadow: 0 8px 24px rgba(64, 76, 255, 0.18);
+}
+
+.profile-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: #f6f8ff;
+  border-radius: 999px;
+  border: 1px solid #e0e4f0;
+}
+
+.profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.profile-text {
+  display: grid;
+  gap: 2px;
+}
+
+.profile-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1b1f36;
+}
+
+.profile-email {
+  font-size: 12px;
+  color: #5b6075;
+}
+
+@media (max-width: 720px) {
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .auth-hero {
+    grid-template-areas:
+      'title'
+      'actions';
+  }
+}
