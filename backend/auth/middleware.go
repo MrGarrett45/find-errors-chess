@@ -11,9 +11,10 @@ import (
 
 // MiddlewareConfig controls auth enforcement behavior.
 type MiddlewareConfig struct {
-	RequireScopes []string
-	PublicPaths   map[string]bool
-	DisableAuth   bool
+	RequireScopes   []string
+	PublicPaths     map[string]bool
+	DisableAuth     bool
+	OnAuthenticated func(*gin.Context, *Claims) error
 }
 
 // Middleware enforces bearer token auth and injects claims into the request context.
@@ -70,6 +71,11 @@ func Middleware(verifier *Verifier, cfg MiddlewareConfig) gin.HandlerFunc {
 
 		ctx := WithClaims(c.Request.Context(), claims)
 		c.Request = c.Request.WithContext(ctx)
+		if cfg.OnAuthenticated != nil {
+			if err := cfg.OnAuthenticated(c, claims); err != nil {
+				log.Printf("auth post-hook failure: path=%s err=%v", c.Request.URL.Path, err)
+			}
+		}
 		c.Next()
 	}
 }

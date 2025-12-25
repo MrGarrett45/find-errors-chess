@@ -28,7 +28,11 @@ func NewRouter() (*gin.Engine, error) {
 	}
 
 	protected := router.Group("/")
-	protected.Use(auth.Middleware(verifier, auth.MiddlewareConfig{}))
+	protected.Use(auth.Middleware(verifier, auth.MiddlewareConfig{
+		OnAuthenticated: func(c *gin.Context, claims *auth.Claims) error {
+			return UpsertUserFromClaims(c.Request.Context(), claims)
+		},
+	}))
 	protected.GET("/me", Me)
 	protected.GET("/chessgames/:username", GetChessGames)
 	protected.GET("/errors/:username", GetErrorPositions)
