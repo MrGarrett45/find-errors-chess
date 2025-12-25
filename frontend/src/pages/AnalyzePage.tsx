@@ -1,13 +1,16 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { useAuth0 } from '@auth0/auth0-react'
 import { UsernameForm } from '../components/UsernameForm'
 import { AnalysisStatus } from '../components/AnalysisStatus'
 import { ErrorsList } from '../components/ErrorsList'
 import type { AnalysisStatusType, ErrorsResponse, JobStatus } from '../types'
+import { authFetch } from '../utils/api'
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:8080'
 
 export function AnalyzePage() {
+  const { getAccessTokenSilently } = useAuth0()
   const [username, setUsername] = useState('')
   const [jobId, setJobId] = useState<string | null>(null)
   const [status, setStatus] = useState<AnalysisStatusType>('idle')
@@ -96,8 +99,10 @@ export function AnalyzePage() {
         engine_move_time: String(moveTimeVal),
         engine_depth_or_time: String(engineUseDepth),
       })
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE}/chessgames/${encodeURIComponent(user)}?${params.toString()}`,
+        undefined,
+        getAccessTokenSilently,
       )
       if (!res.ok) {
         throw new Error(`Failed to start analysis (status ${res.status})`)
@@ -136,7 +141,11 @@ export function AnalyzePage() {
 
     const poll = async () => {
       try {
-        const res = await fetch(`${API_BASE}/jobs/${jobId}`)
+        const res = await authFetch(
+          `${API_BASE}/jobs/${jobId}`,
+          undefined,
+          getAccessTokenSilently,
+        )
         if (!res.ok) {
           throw new Error(`Status request failed (${res.status})`)
         }
@@ -234,7 +243,11 @@ export function AnalyzePage() {
     setErrorsLoading(true)
     setErrorsError(null)
     try {
-      const res = await fetch(`${API_BASE}/errors/${encodeURIComponent(user)}`)
+      const res = await authFetch(
+        `${API_BASE}/errors/${encodeURIComponent(user)}`,
+        undefined,
+        getAccessTokenSilently,
+      )
       if (!res.ok) {
         throw new Error(`Errors request failed (${res.status})`)
       }

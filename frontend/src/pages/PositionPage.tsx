@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useAuth0 } from '@auth0/auth0-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Chessboard,
@@ -9,6 +10,7 @@ import { Chess } from 'chess.js'
 import { StockfishPanel } from '../components/StockfishPanel'
 import { PositionGamesList } from '../components/PositionGamesList'
 import type { ErrorPosition, ErrorsResponse } from '../types'
+import { authFetch } from '../utils/api'
 
 function decodeId(id: string): { username: string; fen: string } | null {
   try {
@@ -24,6 +26,7 @@ function decodeId(id: string): { username: string; fen: string } | null {
 }
 
 export function PositionPage() {
+  const { getAccessTokenSilently } = useAuth0()
   const params = useParams<{ id: string }>()
   const navigate = useNavigate()
   const decoded = useMemo(() => (params.id ? decodeId(params.id) : null), [params.id])
@@ -204,7 +207,11 @@ export function PositionPage() {
       setErrorsLoading(true)
       setErrorsError(null)
       try {
-        const res = await fetch(`${API_BASE}/errors/${encodeURIComponent(username)}`)
+        const res = await authFetch(
+          `${API_BASE}/errors/${encodeURIComponent(username)}`,
+          undefined,
+          getAccessTokenSilently,
+        )
         if (!res.ok) {
           throw new Error(`Failed to load errors (${res.status})`)
         }
