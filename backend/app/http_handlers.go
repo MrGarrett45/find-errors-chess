@@ -15,6 +15,7 @@ import (
 
 	"example/my-go-api/app/config"
 	"example/my-go-api/app/models"
+	"example/my-go-api/auth"
 
 	aws "github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -36,6 +37,12 @@ func GetChessGames(c *gin.Context) {
 	username := strings.ToLower(c.Param("username"))
 	if username == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing username"})
+		return
+	}
+
+	claims, ok := auth.ClaimsFromContext(c.Request.Context())
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing auth context"})
 		return
 	}
 
@@ -148,6 +155,22 @@ func GetChessGames(c *gin.Context) {
 		limit = len(out)
 	}
 	gamesToSave := out[:limit]
+
+	_, err = enforceWeeklyQuota(c.Request.Context(), claims.Subject, len(gamesToSave))
+	if err != nil {
+		if qe, ok := err.(quotaError); ok {
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error":        "quota_exceeded",
+				"message":      "Free users can analyze up to 100 games per week.",
+				"limit":        qe.Limit,
+				"analysesUsed": qe.Used,
+			})
+			return
+		}
+		log.Printf("failed to enforce quota: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify quota"})
+		return
+	}
 
 	// Save games
 	if err := saveGames(ctx, username, gamesToSave); err != nil {

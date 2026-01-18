@@ -3,7 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react'
 import { UsernameForm } from '../components/UsernameForm'
 import { AnalysisStatus } from '../components/AnalysisStatus'
 import { ErrorsList } from '../components/ErrorsList'
-import type { AnalysisStatusType, ErrorsResponse, JobStatus } from '../types'
+import type { AnalysisStatusType, ErrorsResponse, JobStatus, MeResponse } from '../types'
 import { authFetch } from '../utils/api'
 
 const API_BASE =
@@ -12,6 +12,8 @@ const API_BASE =
 export function AnalyzePage() {
   const { getAccessTokenSilently } = useAuth0()
   const [username, setUsername] = useState('')
+  const [me, setMe] = useState<MeResponse | null>(null)
+  const [meError, setMeError] = useState<string | null>(null)
   const [jobId, setJobId] = useState<string | null>(null)
   const [status, setStatus] = useState<AnalysisStatusType>('idle')
   const [progress, setProgress] = useState(0)
@@ -35,12 +37,33 @@ export function AnalyzePage() {
   const moveTimeVal = typeof engineMoveTime === 'number' ? engineMoveTime : NaN
   const depthValid = depthVal >= 1 && depthVal <= 25
   const moveTimeValid = moveTimeVal >= 0 && moveTimeVal <= 1000
+  const quotaBlocked = me?.plan === 'FREE' && (me.remaining ?? 0) <= 0
   const submitDisabled =
     status === 'starting' ||
     status === 'running' ||
     !username.trim() ||
     !depthValid ||
-    !moveTimeValid
+    !moveTimeValid ||
+    quotaBlocked
+
+  useEffect(() => {
+    const loadMe = async () => {
+      setMeError(null)
+      try {
+        const res = await authFetch(`${API_BASE}/me`, undefined, getAccessTokenSilently)
+        if (!res.ok) {
+          throw new Error(`Failed to load usage (${res.status})`)
+        }
+        const body = (await res.json()) as MeResponse
+        setMe(body)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load usage'
+        setMeError(message)
+      }
+    }
+
+    loadMe()
+  }, [getAccessTokenSilently])
 
   // Restore cached errors (e.g., when returning from position page)
   useEffect(() => {
@@ -105,11 +128,36 @@ export function AnalyzePage() {
         getAccessTokenSilently,
       )
       if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        if (res.status === 402 || res.status === 429) {
+          setError(
+            body?.message ||
+              "You've used your 100 free games this week. Upgrade to PRO for unlimited analysis.",
+          )
+          setStatus('failed')
+          return
+        }
         throw new Error(`Failed to start analysis (status ${res.status})`)
       }
       const body = await res.json()
       const newJobId: string | undefined = body?.job_id
       const batches: number | undefined = body?.batches
+      const analyzedCount: number = Number(body?.count ?? 0)
+
+      if (me?.plan === 'FREE') {
+        setMe((prev) =>
+          prev
+            ? {
+                ...prev,
+                analysesUsed: prev.analysesUsed + analyzedCount,
+                remaining:
+                  prev.remaining != null
+                    ? Math.max(0, prev.remaining - analyzedCount)
+                    : prev.remaining,
+              }
+            : prev,
+        )
+      }
 
       if (!newJobId || !batches) {
         setStatus('completed')
@@ -272,6 +320,18 @@ export function AnalyzePage() {
           <div className="badge">Theory Gap</div>
           <div className="headline">{introCopy.title}</div>
           <p className="summary">{introCopy.desc}</p>
+          {me ? (
+            me.plan === 'PRO' ? (
+              <p className="summary">Pro plan: unlimited analyses each week.</p>
+            ) : (
+              <p className="summary">
+                Free plan: {me.remaining ?? 0} analyses left this week (limit{' '}
+                {me.weeklyLimit ?? 100}).
+              </p>
+            )
+          ) : meError ? (
+            <p className="summary">{meError}</p>
+          ) : null}
         </div>
 
         <UsernameForm

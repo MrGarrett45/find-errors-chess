@@ -37,6 +37,15 @@ export type ErrorsResponse = {
   positions: ErrorPosition[]
 }
 
+export type Plan = 'FREE' | 'PRO'
+
+export type MeResponse = {
+  plan: Plan
+  analysesUsed: number
+  weeklyLimit: number | null
+  remaining: number | null
+}
+
 export type EngineScore = { type: 'cp'; value: number } | { type: 'mate'; value: number }
 
 export type EngineLine = {

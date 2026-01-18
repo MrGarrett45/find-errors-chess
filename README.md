@@ -11,3 +11,4 @@ ToDo:
 6. Get custom domain
 7. Differentiate on frontend between blunder/suboptimal/etc
 8. Improve UI
+9. Handle scenario for analysis hanging
