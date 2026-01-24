@@ -19,14 +19,12 @@ const API_BASE =
 export default function App() {
   const { isAuthenticated, isLoading, error, getAccessTokenSilently } = useAuth0()
   const [me, setMe] = useState<MeResponse | null>(null)
-  const [meError, setMeError] = useState<string | null>(null)
   const [meLoading, setMeLoading] = useState(false)
 
   useEffect(() => {
     if (!isAuthenticated) return
     const loadMe = async () => {
       setMeLoading(true)
-      setMeError(null)
       try {
         const res = await authFetch(`${API_BASE}/me`, undefined, getAccessTokenSilently)
         if (!res.ok) {
@@ -35,8 +33,6 @@ export default function App() {
         const body = (await res.json()) as MeResponse
         setMe(body)
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load plan'
-        setMeError(message)
         setMe(null)
       } finally {
         setMeLoading(false)
