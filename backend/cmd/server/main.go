@@ -7,6 +7,7 @@ import (
 
 func main() {
 	app.MustInitDB()
+	app.InitStripe()
 	router, err := app.NewRouter()
 	if err != nil {
 		log.Fatalf("failed to initialize router: %v", err)

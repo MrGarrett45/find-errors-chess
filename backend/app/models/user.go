@@ -15,4 +15,5 @@ type User struct {
 	Plan             Plan      `db:"plan"`
 	AnalysesUsed     int       `db:"analyses_used"`
 	UsagePeriodStart time.Time `db:"usage_period_start"`
+	StripeCustomerID *string   `db:"stripe_customer_id"`
 }

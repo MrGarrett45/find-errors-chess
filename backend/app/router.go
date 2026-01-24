@@ -15,12 +15,13 @@ func NewRouter() (*gin.Engine, error) {
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"*"},
-		AllowMethods: []string{"GET", "OPTIONS"},
+		AllowMethods: []string{"GET", "POST", "OPTIONS"},
 		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		MaxAge:       12 * time.Hour,
 	}))
 
 	router.GET("/health", Health)
+	router.POST("/api/stripe/webhook", StripeWebhook)
 
 	verifier, err := auth.NewVerifierFromEnv()
 	if err != nil && !auth.AuthDisabled() {
@@ -37,6 +38,9 @@ func NewRouter() (*gin.Engine, error) {
 	protected.GET("/chessgames/:username", GetChessGames)
 	protected.GET("/errors/:username", GetErrorPositions)
 	protected.GET("/jobs/:jobid", GetJobStatus)
+	protected.POST("/api/billing/create-checkout-session", CreateCheckoutSession)
+	protected.POST("/api/billing/portal-session", CreatePortalSession)
+	protected.POST("/api/billing/update-plan", UpdateUserPlan)
 
 	return router, nil
 }

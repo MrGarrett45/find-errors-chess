@@ -14,6 +14,7 @@ type Config struct {
 	DB       PostgresConfig
 	Engine   EngineConfig
 	QueueURL string
+	Stripe   StripeConfig
 }
 
 type LogConfig struct {
@@ -31,6 +32,13 @@ type EngineConfig struct {
 	Path     string
 	NumMoves int //how many moves should the engine process
 	NumGames int
+}
+
+type StripeConfig struct {
+	SecretKey         string
+	PriceIDProMonthly string
+	WebhookSecret     string
+	FrontendURL       string
 }
 
 func LoadConfig() (*Config, error) {
@@ -60,6 +68,12 @@ func LoadConfig() (*Config, error) {
 			Path:     os.Getenv("ENGINE_PATH"),
 			NumMoves: numMoves,
 			NumGames: numGames,
+		},
+		Stripe: StripeConfig{
+			SecretKey:         os.Getenv("STRIPE_SECRET_KEY"),
+			PriceIDProMonthly: os.Getenv("STRIPE_PRICE_ID_PRO_MONTHLY"),
+			WebhookSecret:     os.Getenv("STRIPE_WEBHOOK_SECRET"),
+			FrontendURL:       os.Getenv("FRONTEND_URL"),
 		},
 	}
 

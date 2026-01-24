@@ -26,7 +26,10 @@ func UpsertUserFromClaims(ctx context.Context, claims *auth.Claims) error {
 	const q = `
 		INSERT INTO users (auth0_sub, email, name, last_login, plan, analyses_used, usage_period_start)
 		VALUES ($1, $2, $3, now(), $4, $5, $6)
-		ON CONFLICT (auth0_sub) DO NOTHING;
+		ON CONFLICT (auth0_sub) DO UPDATE
+		SET
+			last_login = now(),
+			plan = COALESCE(users.plan, EXCLUDED.plan);
 	`
 
 	_, err := db.ExecContext(

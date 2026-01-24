@@ -347,6 +347,13 @@
   gap: 12px;
 }
 
+.app-brand-link {
+  text-decoration: none;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+}
+
 .app-logo {
   width: 44px;
   height: 44px;
