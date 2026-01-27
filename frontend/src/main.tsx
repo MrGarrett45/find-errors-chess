@@ -6,6 +6,7 @@ import "./index.css";
 
 const domain = import.meta.env.VITE_AUTH0_DOMAIN;
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
+const audience = import.meta.env.VITE_AUTH0_AUDIENCE as string | undefined;
 
 // Validate Auth0 configuration
 if (!domain || !clientId) {
@@ -38,8 +39,13 @@ ReactDOM.createRoot(rootElement).render(
     <Auth0Provider
       domain={domain}
       clientId={clientId}
+      cacheLocation="localstorage"
+      useRefreshTokens
+      useRefreshTokensFallback
       authorizationParams={{
         redirect_uri: window.location.origin,
+        ...(audience ? { audience } : {}),
+        scope: "openid profile email offline_access",
       }}
     >
       <App />
