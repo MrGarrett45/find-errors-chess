@@ -19,6 +19,7 @@ var ginLambdaV2 *ginadapter.GinLambdaV2
 func init() {
 	// Initialize DB connection pool
 	app.MustInitDB()
+	app.InitStripe()
 
 	// Set up Gin router
 	router, err := app.NewRouter()
