@@ -6,7 +6,6 @@ ToDo:
 1. Add lichess support
 2. Add caching so you don't re run stale analysis. Also cache errors
 3. Figure out what's going on with discrepancy between local analysis and docker container anaylsis
-4. Differentiate on frontend between blunder/suboptimal/etc
 5. Improve UI
 6. Handle scenario for analysis hanging
 7. Differentiate on frontend between common bad openings

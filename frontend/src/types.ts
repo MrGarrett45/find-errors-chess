@@ -14,6 +14,7 @@ export type ErrorPosition = {
     SuboptimalCount: number
     InaccuracyCount: number
     MistakeCount: number
+    BlunderCount: number
     ErrorCount: number
     ErrorRate: number
     SideToMove: string

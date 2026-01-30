@@ -129,12 +129,12 @@ function AppRoutes() {
           </div>
         </Link>
         <div className="app-actions">
+          <Profile />
           {!meLoading && (
             <Link className="button button--ghost" to="/billing">
               {me?.plan === 'PRO' ? 'Billing' : 'Go Pro!'}
             </Link>
           )}
-          <Profile />
           <LogoutButton />
         </div>
       </header>
