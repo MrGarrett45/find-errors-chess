@@ -108,8 +108,8 @@ function AppRoutes() {
             <LoginButton />
           </div>
           <div className="auth-links">
-            <Link to="/terms">Terms</Link>
-            <Link to="/privacy">Privacy</Link>
+            <a href="/terms.html">Terms</a>
+            <a href="/privacy.html">Privacy</a>
           </div>
         </section>
       </main>
