@@ -124,7 +124,7 @@ export function ErrorsList({ data, isLoading, error }: ErrorsListProps) {
             <div className="info-tooltip__text">
               Suboptimal = small loss, Inaccuracy = notable loss, Mistake = major loss,
               Blunder = decisive loss. Depending on engine settings, a position can
-              appear in multiple categories. An accurate move can also occasionally appear as an error (see error rate)
+              appear in multiple categories. An accurate move can also occasionally appear as an error (see innacuracy rate)
             </div>
           </div>
         </div>

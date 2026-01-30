@@ -125,7 +125,7 @@
   position: absolute;
   top: calc(100% + 10px);
   left: 0;
-  right: 0;
+  width: 280px;
   pointer-events: none;
   opacity: 0;
   transform: translateY(-6px);
@@ -145,6 +145,7 @@
   border-radius: 12px;
   box-shadow: 0 16px 36px rgba(23, 28, 38, 0.14);
   padding: 14px;
+  width: 100%;
 }
 
 .button {

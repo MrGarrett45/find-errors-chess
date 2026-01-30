@@ -21,7 +21,7 @@ export function AnalyzePage() {
   const [totalBatches, setTotalBatches] = useState<number | null>(null)
   const [months, setMonths] = useState(3)
   const [limit, setLimit] = useState<number | ''>(100)
-  const [engineDepth, setEngineDepth] = useState<number | ''>(12)
+  const [engineDepth, setEngineDepth] = useState<number | ''>(14)
   const [engineMoveTime, setEngineMoveTime] = useState<number | ''>(50)
   const [engineUseDepth, setEngineUseDepth] = useState(false)
   const [errorsData, setErrorsData] = useState<ErrorsResponse | null>(null)
@@ -35,8 +35,8 @@ export function AnalyzePage() {
   const ERROR_CACHE_KEY = 'errorsCache'
   const depthVal = typeof engineDepth === 'number' ? engineDepth : NaN
   const moveTimeVal = typeof engineMoveTime === 'number' ? engineMoveTime : NaN
-  const depthValid = depthVal >= 1 && depthVal <= 25
-  const moveTimeValid = moveTimeVal >= 0 && moveTimeVal <= 1000
+  const depthValid = depthVal >= 8 && depthVal <= 20
+  const moveTimeValid = moveTimeVal >= 25 && moveTimeVal <= 1000
   const quotaBlocked = me?.plan === 'FREE' && (me.remaining ?? 0) <= 0
   const submitDisabled =
     status === 'starting' ||
@@ -97,7 +97,7 @@ export function AnalyzePage() {
     if (!user) return
 
     if (!depthValid || !moveTimeValid) {
-      setError('Please enter a depth (1-25) and movetime (0-1000ms).')
+      setError('Please enter a depth (8-20) or movetime (25-1000ms).')
       return
     }
 

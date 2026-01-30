@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { EngineSettingsForm } from './EngineSettingsForm'
 
 type UsernameFormProps = {
@@ -39,6 +39,21 @@ export function UsernameForm({
   isFetchDisabled,
 }: UsernameFormProps) {
   const [showEngineSettings, setShowEngineSettings] = useState(false)
+  const popoverRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!showEngineSettings) return
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as Node | null
+      if (!target) return
+      if (popoverRef.current && !popoverRef.current.contains(target)) {
+        setShowEngineSettings(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showEngineSettings])
 
   return (
     <form className="panel input-group" onSubmit={onSubmit} aria-label="Start analysis">
@@ -58,7 +73,7 @@ export function UsernameForm({
         required
       />
 
-      <div className="controls-with-popover">
+      <div className="controls-with-popover" ref={popoverRef}>
         <div className="controls" aria-label="Controls">
           <label className="label" htmlFor="months">
             Months

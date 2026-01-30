@@ -10,3 +10,4 @@ ToDo:
 5. Handle scenario for analysis hanging
 6. Let users see which openings they struggle against (?)
 7. Get google auth out of test mode
+8. Let users select to only see innacuracies after x moves. Will allow them to ignore if they purposely gambit or something early.

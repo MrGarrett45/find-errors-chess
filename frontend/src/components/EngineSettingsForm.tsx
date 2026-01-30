@@ -19,6 +19,15 @@ export function EngineSettingsForm({
   onEngineUseDepthChange,
   isDisabled,
 }: EngineSettingsFormProps) {
+  const setMode = (useDepth: boolean) => {
+    onEngineUseDepthChange(useDepth)
+    if (useDepth) {
+      onEngineDepthChange(14)
+    } else {
+      onEngineMoveTimeChange(50)
+    }
+  }
+
   const handleDepth = (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     if (val === '') {
@@ -26,7 +35,8 @@ export function EngineSettingsForm({
       return
     }
     const num = Number(val)
-    onEngineDepthChange(Number.isFinite(num) ? num : '')
+    const clamped = Math.min(20, Math.max(8, num))
+    onEngineDepthChange(Number.isFinite(clamped) ? clamped : '')
   }
 
   const handleMoveTime = (e: ChangeEvent<HTMLInputElement>) => {
@@ -36,52 +46,68 @@ export function EngineSettingsForm({
       return
     }
     const num = Number(val)
-    onEngineMoveTimeChange(Number.isFinite(num) ? num : '')
+    const clamped = Math.min(1000, Math.max(25, num))
+    onEngineMoveTimeChange(Number.isFinite(clamped) ? clamped : '')
   }
 
   return (
-    <div className="controls" aria-label="Engine settings" style={{ gap: 10 }}>
-      <label className="label" htmlFor="engine-depth">
-        Engine depth (1-25)
-      </label>
-      <input
-        id="engine-depth"
-        className="input"
-        type="number"
-        min={1}
-        max={25}
-        value={engineDepth}
-        onChange={handleDepth}
-        style={{ width: '120px' }}
-        required
-        disabled={isDisabled}
-      />
-      <label className="label" htmlFor="engine-movetime">
-        Movetime (ms 0-1000)
-      </label>
-      <input
-        id="engine-movetime"
-        className="input"
-        type="number"
-        min={0}
-        max={1000}
-        value={engineMoveTime}
-        onChange={handleMoveTime}
-        style={{ width: '140px' }}
-        required
-        disabled={isDisabled}
-      />
-      <label className="label" htmlFor="engine-use-depth">
-        Use depth?
-      </label>
-      <input
-        id="engine-use-depth"
-        type="checkbox"
-        checked={engineUseDepth}
-        onChange={(e) => onEngineUseDepthChange(e.target.checked)}
-        style={{ width: 20, height: 20 }}
-        disabled={isDisabled}
-      />
+    <div className="input-group" aria-label="Engine settings" style={{ gap: 10 }}>
+      <div className="pill-row">
+        <button
+          type="button"
+          className={`pill pill-button ${!engineUseDepth ? 'pill-active' : ''}`}
+          onClick={() => setMode(false)}
+          disabled={isDisabled}
+        >
+          Movetime
+        </button>
+        <button
+          type="button"
+          className={`pill pill-button ${engineUseDepth ? 'pill-active' : ''}`}
+          onClick={() => setMode(true)}
+          disabled={isDisabled}
+        >
+          Depth
+        </button>
+      </div>
+
+      {!engineUseDepth ? (
+        <>
+          <label className="label" htmlFor="engine-movetime">
+            Movetime (ms 25-1000)
+          </label>
+          <input
+            id="engine-movetime"
+            className="input"
+            type="number"
+            min={25}
+            max={1000}
+            value={engineMoveTime}
+            onChange={handleMoveTime}
+            style={{ width: '140px' }}
+            required
+            disabled={isDisabled}
+          />
+        </>
+      ) : (
+        <>
+          <label className="label" htmlFor="engine-depth">
+            Engine depth (8-20)
+          </label>
+          <input
+            id="engine-depth"
+            className="input"
+            type="number"
+            min={8}
+            max={20}
+            value={engineDepth}
+            onChange={handleDepth}
+            style={{ width: '120px' }}
+            required
+            disabled={isDisabled}
+          />
+        </>
+      )}
     </div>
   )
 }
