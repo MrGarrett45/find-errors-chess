@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { EngineLine, EngineScore } from '../types'
 import { useStockfish } from '../hooks/useStockfish'
 
@@ -5,6 +6,9 @@ type StockfishPanelProps = {
   fen: string
   depth?: number
   multipv?: number
+  minDepth?: number
+  maxDepth?: number
+  onDepthChange?: (depth: number) => void
 }
 
 const formatScore = (score: EngineScore | null): string => {
@@ -18,7 +22,20 @@ const formatScore = (score: EngineScore | null): string => {
 const formatLine = (line: EngineLine): string =>
   (line.san.length ? line.san : line.pv).slice(0, 14).join(' ')
 
-export function StockfishPanel({ fen, depth = 14, multipv = 3 }: StockfishPanelProps) {
+export function StockfishPanel({
+  fen,
+  depth = 14,
+  multipv = 3,
+  minDepth = 8,
+  maxDepth = 20,
+  onDepthChange,
+}: StockfishPanelProps) {
+  const [depthInput, setDepthInput] = useState(String(depth))
+
+  useEffect(() => {
+    setDepthInput(String(depth))
+  }, [depth])
+
   const { lines, isReady, isAnalyzing, error, restart } = useStockfish(fen, {
     depth,
     multipv,
@@ -39,14 +56,56 @@ export function StockfishPanel({ fen, depth = 14, multipv = 3 }: StockfishPanelP
           <div className="badge">Stockfish</div>
           <div className="engine-panel__title">Top moves</div>
         </div>
-        <button
-          className="button"
-          type="button"
-          onClick={restart}
-          disabled={!isReady || isAnalyzing}
-        >
-          Refresh
-        </button>
+        <div className="controls">
+          <div className="input-group stockfish-depth">
+            <label className="label" htmlFor="stockfish-depth">
+              Depth
+            </label>
+            <input
+              id="stockfish-depth"
+              className="input input--compact"
+              type="text"
+              inputMode="numeric"
+              min={minDepth}
+              max={maxDepth}
+              value={depthInput}
+              onChange={(e) => {
+                const next = e.target.value
+                if (!/^\d*$/.test(next)) return
+                setDepthInput(next)
+              }}
+              onBlur={() => {
+                if (!onDepthChange) {
+                  setDepthInput(String(depth))
+                  return
+                }
+                const parsed = Number(depthInput)
+                if (Number.isNaN(parsed)) {
+                  setDepthInput(String(depth))
+                  return
+                }
+                const clamped = Math.min(maxDepth, Math.max(minDepth, parsed))
+                setDepthInput(String(clamped))
+                onDepthChange(clamped)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  ;(e.currentTarget as HTMLInputElement).blur()
+                }
+              }}
+            />
+          </div>
+          <button
+            className="button"
+            type="button"
+            onClick={restart}
+            disabled={!isReady || isAnalyzing}
+            style={{ display: 'none' }}
+            aria-hidden="true"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       <div className="meta">{statusText}</div>

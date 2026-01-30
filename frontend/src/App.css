@@ -87,6 +87,13 @@
   transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
 }
 
+.input--compact {
+  padding: 6px 10px;
+  font-size: 14px;
+  border-radius: 10px;
+  max-width: 72px;
+}
+
 .input:focus {
   outline: none;
   border-color: #404cff;
@@ -217,6 +224,11 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+}
+
+.stockfish-depth {
+  min-width: 0;
+  width: auto;
 }
 
 .engine-panel__title {
@@ -402,6 +414,22 @@
   min-width: 260px;
 }
 
+.auth-links {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  width: 100%;
+  font-size: 13px;
+}
+
+.auth-links a {
+  color: #5b6075;
+  text-decoration: none;
+}
+
+.auth-links a:hover {
+  color: #1b1f36;
+}
 .auth-title {
   font-size: 18px;
   font-weight: 600;

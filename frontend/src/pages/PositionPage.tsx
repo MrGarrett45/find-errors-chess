@@ -44,6 +44,7 @@ export function PositionPage() {
   const [errorsError, setErrorsError] = useState<string | null>(null)
   const [fenHistory, setFenHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(0)
+  const [engineDepth, setEngineDepth] = useState(15)
 
   // Initialize chess.js from the FEN in the URL
   useEffect(() => {
@@ -136,6 +137,7 @@ export function PositionPage() {
   }
 
   const currentFen = game ? game.fen() : initialFen
+  const depthValue = Math.min(20, Math.max(8, engineDepth))
   const canStepBack = historyIndex > 0
   const canStepForward = historyIndex < fenHistory.length - 1
   const canReset = historyIndex !== 0 && fenHistory.length > 0
@@ -305,7 +307,13 @@ export function PositionPage() {
             </div>
           </div>
 
-          <StockfishPanel fen={currentFen} />
+          <StockfishPanel
+            fen={currentFen}
+            depth={depthValue}
+            minDepth={8}
+            maxDepth={20}
+            onDepthChange={setEngineDepth}
+          />
         </div>
         <PositionGamesList
           position={matchedPosition}
