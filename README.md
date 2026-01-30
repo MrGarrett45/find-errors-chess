@@ -6,8 +6,7 @@ ToDo:
 1. Add lichess support
 2. Add caching so you don't re run stale analysis. Also cache errors
 3. Figure out what's going on with discrepancy between local analysis and docker container anaylsis
-5. Improve UI
-6. Handle scenario for analysis hanging
-7. Differentiate on frontend between common bad openings
-10. Fix mobile UI
-11. Get google auth out of test mode
+4. Improve UI
+5. Handle scenario for analysis hanging
+6. Let users see which openings they struggle against (?)
+7. Get google auth out of test mode

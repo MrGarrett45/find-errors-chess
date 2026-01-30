@@ -154,6 +154,7 @@
   border-radius: 12px;
   padding: 12px 16px;
   font-weight: 700;
+  font-size: 14px;
   cursor: pointer;
   transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
   display: inline-flex;
@@ -666,5 +667,32 @@
     grid-template-areas:
       'title'
       'actions';
+  }
+}
+.position-games-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.position-games-link {
+  padding: 8px 12px;
+  min-width: 120px;
+  justify-content: center;
+  margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .position-games-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .position-games-link {
+    width: 100%;
+    margin-left: 0;
   }
 }

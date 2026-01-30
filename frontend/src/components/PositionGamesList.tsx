@@ -47,43 +47,18 @@ export function PositionGamesList({ position, isLoading, error }: PositionGamesL
               <span className="engine-line__depth">Move {mv.MoveNumber}</span>
               <span className="engine-line__score">Your Move: {mv.MoveSAN || '-'}</span>
             </div>
-            <div
-              className="engine-line__pv"
-              style={{
-                display: 'flex',
-                gap: 12,
-                alignItems: 'center',
-                width: '100%',
-                marginTop: 10,
-              }}
-            >
+            <div className="engine-line__pv position-games-row">
               <span className="pill" style={{ flexShrink: 0 }}>
                 <strong>Opponent:</strong>&nbsp;{mv.Opponent}
               </span>
-              <span
-                className="pill"
-                style={{
-                  background: '#eef2ff',
-                  flex: '0 1 auto',
-                  textAlign: 'center',
-                  marginLeft: 'auto',
-                  marginRight: 'auto',
-                  alignSelf: 'center',
-                }}
-              >
+              <span className="pill" style={{ background: '#eef2ff' }}>
                 <strong>Opening:</strong>&nbsp;{mv.ECO || '—'}
               </span>
               <a
                 href={mv.URL}
                 target="_blank"
                 rel="noreferrer"
-                className="button"
-                style={{
-                  padding: '8px 12px',
-                  minWidth: 120,
-                  justifyContent: 'center',
-                  marginLeft: 'auto',
-                }}
+                className="button position-games-link"
               >
                 View game
               </a>
