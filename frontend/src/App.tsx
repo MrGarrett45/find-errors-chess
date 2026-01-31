@@ -97,7 +97,7 @@ function AppRoutes() {
             <img src="/theory-gap-logo.png" alt="Theory Gap logo" className="auth-logo" />
             <div className="headline">Theory Gap</div>
             <p className="summary">
-              Analyze your openings, spot recurring mistakes, and sharpen your prep.
+              Analyze your chess openings move by move, spot recurring mistakes, and sharpen your prep.
             </p>
           </div>
           <div className="panel auth-panel">
