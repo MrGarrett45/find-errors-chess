@@ -189,7 +189,20 @@ func GetChessGames(c *gin.Context) {
 	totalBatches := (totalGames + batchSize - 1) / batchSize // ceil division
 
 	// Record that a job has begun
-	jobID, err := CreateJob(ctx, username, totalGames, batchSize, totalBatches)
+	user, err := getUserByAuth0Sub(ctx, claims.Subject)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			_ = UpsertUserFromClaims(ctx, claims)
+			user, err = getUserByAuth0Sub(ctx, claims.Subject)
+		}
+		if err != nil {
+			log.Printf("failed to resolve user id for sub=%s: %v", claims.Subject, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to begin analysis"})
+			return
+		}
+	}
+
+	jobID, err := CreateJob(ctx, username, user.ID, totalGames, batchSize, totalBatches)
 	if err != nil {
 		log.Printf("failed to create job for user=%s: %v", username, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to begin analysis"})

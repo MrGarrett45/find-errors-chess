@@ -9,6 +9,7 @@ import (
 	"example/my-go-api/app/config"
 	"example/my-go-api/app/models"
 
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
 
@@ -659,17 +660,17 @@ func nullableIntToPtr(v sql.NullInt64) *int {
 	return &n
 }
 
-func CreateJob(ctx context.Context, username string, totalGames, batchSize, totalBatches int) (string, error) {
+func CreateJob(ctx context.Context, username string, startedByUserID uuid.UUID, totalGames, batchSize, totalBatches int) (string, error) {
 	const q = `
-        INSERT INTO jobs (username, total_games, batch_size, total_batches)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO jobs (username, started_by_user_id, total_games, batch_size, total_batches)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING id;
     `
 	var jobID string
-	if err := db.QueryRowContext(ctx, q, username, totalGames, batchSize, totalBatches).Scan(&jobID); err != nil {
+	if err := db.QueryRowContext(ctx, q, username, startedByUserID, totalGames, batchSize, totalBatches).Scan(&jobID); err != nil {
 		return "", err
 	}
-	log.Printf("Created job %s for user=%s totalGames=%d totalBatches=%d", jobID, username, totalGames, totalBatches)
+	log.Printf("user %s created job %s for user=%s totalGames=%d totalBatches=%d", startedByUserID, jobID, username, totalGames, totalBatches)
 	return jobID, nil
 }
 

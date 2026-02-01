@@ -69,10 +69,10 @@ func nullIfEmpty(s string) sql.NullString {
 func getUserByAuth0Sub(ctx context.Context, auth0Sub string) (models.User, error) {
 	var user models.User
 	err := db.QueryRowContext(ctx, `
-		SELECT plan, analyses_used, usage_period_start
+		SELECT id, plan, analyses_used, usage_period_start
 		FROM users
 		WHERE auth0_sub = $1;
-	`, auth0Sub).Scan(&user.Plan, &user.AnalysesUsed, &user.UsagePeriodStart)
+	`, auth0Sub).Scan(&user.ID, &user.Plan, &user.AnalysesUsed, &user.UsagePeriodStart)
 	if err != nil {
 		return models.User{}, err
 	}
