@@ -11,3 +11,7 @@ ToDo:
 6. Let users see which openings they struggle against (?)
 7. Get google auth out of test mode
 8. Let users select to only see innacuracies after x moves. Will allow them to ignore if they purposely gambit or something early.
+9. Add in some calculations to give users an idea of how fast analysis will be based on engine settings
+10. Jobs table should show which auth0 user kicked off the job
+11. Cap number of moves free users can explore (i.e. first 8), let pro users do more
+12. Increase DB size for production

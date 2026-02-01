@@ -331,7 +331,20 @@ func SaveMoves(ctx context.Context, games []models.GameLite, settings models.Eng
 			eval_after_cp, eval_before_mate, eval_after_mate, centipawn_change, best_move_uci, is_inaccuracy, is_mistake, is_blunder,
 			is_suboptimal, normalized_fen_before, played_by
 		FROM tmp_moves
-		ON CONFLICT (game_id, ply) DO NOTHING;
+		ON CONFLICT (game_id, ply) DO UPDATE
+		SET
+			eval_depth = EXCLUDED.eval_depth,
+			eval_time = EXCLUDED.eval_time,
+			eval_before_cp = EXCLUDED.eval_before_cp,
+			eval_after_cp = EXCLUDED.eval_after_cp,
+			eval_before_mate = EXCLUDED.eval_before_mate,
+			eval_after_mate = EXCLUDED.eval_after_mate,
+			centipawn_change = EXCLUDED.centipawn_change,
+			best_move_uci = EXCLUDED.best_move_uci,
+			is_inaccuracy = EXCLUDED.is_inaccuracy,
+			is_mistake = EXCLUDED.is_mistake,
+			is_blunder = EXCLUDED.is_blunder,
+			is_suboptimal = EXCLUDED.is_suboptimal;
 	`)
 	if err != nil {
 		return err

@@ -15,7 +15,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
-	settings := models.EngineSettings{Depth: 12, MoveTimeMS: 50, UseDepth: false}
+	settings := models.EngineSettings{Depth: 12, MoveTimeMS: 75, UseDepth: false}
 
 	app.MustInitDB()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
