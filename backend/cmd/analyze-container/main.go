@@ -90,7 +90,7 @@ func main() {
 				//   (it will become visible again after VisibilityTimeout)
 				// - If the error is permanent (bad payload): delete it
 				//
-				// For now we *don't* delete so it can be retried:
+				// For now *don't* delete so it can be retried:
 				continue
 			}
 

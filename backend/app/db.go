@@ -221,6 +221,23 @@ func LoadGames(ctx context.Context, username string, limit, offset int) ([]model
 	return out, nil
 }
 
+// CountGames returns the number of games stored for a user.
+func CountGames(ctx context.Context, username string) (int, error) {
+	if db == nil {
+		return 0, nil
+	}
+	var count int
+	err := db.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM games
+		WHERE username = $1;
+	`, username).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func SaveMoves(ctx context.Context, games []models.GameLite, settings models.EngineSettings) error {
 	if db == nil {
 		// Allow test runs without a backing DB.

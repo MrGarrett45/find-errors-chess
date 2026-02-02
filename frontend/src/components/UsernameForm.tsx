@@ -130,6 +130,8 @@ export function UsernameForm({
             type="button"
             disabled={!username.trim() || isFetchDisabled}
             onClick={onFetchErrors}
+            style={{ display: 'none' }}
+            aria-hidden="true"
           >
             Fetch errors only
           </button>

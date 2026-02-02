@@ -37,6 +37,7 @@ func NewRouter() (*gin.Engine, error) {
 	protected.GET("/me", Me)
 	protected.GET("/chessgames/:username", GetChessGames)
 	protected.GET("/errors/:username", GetErrorPositions)
+	protected.GET("/games/count/:username", GetGamesCount)
 	protected.GET("/jobs/:jobid", GetJobStatus)
 	protected.POST("/api/billing/create-checkout-session", CreateCheckoutSession)
 	protected.POST("/api/billing/portal-session", CreatePortalSession)

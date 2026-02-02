@@ -27,6 +27,9 @@ export function AnalyzePage() {
   const [errorsData, setErrorsData] = useState<ErrorsResponse | null>(null)
   const [errorsLoading, setErrorsLoading] = useState(false)
   const [errorsError, setErrorsError] = useState<string | null>(null)
+  const [showExistingModal, setShowExistingModal] = useState(false)
+  const [existingCount, setExistingCount] = useState(0)
+  const [pendingUsername, setPendingUsername] = useState<string | null>(null)
   const jobRef = useRef<JobStatus | null>(null)
   const targetProgressRef = useRef(0) // snap-to value from backend
   const rafId = useRef<number | null>(null)
@@ -91,9 +94,9 @@ export function AnalyzePage() {
     [],
   )
 
-  const startAnalysis = async (evt: FormEvent) => {
+  const startAnalysis = async (evt: FormEvent, overrideUser?: string) => {
     evt.preventDefault()
-    const user = username.trim()
+    const user = (overrideUser ?? username).trim()
     if (!user) return
 
     if (!depthValid || !moveTimeValid) {
@@ -113,6 +116,25 @@ export function AnalyzePage() {
     sessionStorage.removeItem(ERROR_CACHE_KEY)
 
     try {
+      if (!overrideUser) {
+        const countRes = await authFetch(
+          `${API_BASE}/games/count/${encodeURIComponent(user)}`,
+          undefined,
+          getAccessTokenSilently,
+        )
+        if (countRes.ok) {
+          const countBody = await countRes.json()
+          const countVal = Number(countBody?.count ?? 0)
+          if (countVal > 0) {
+            setExistingCount(countVal)
+            setPendingUsername(user)
+            setShowExistingModal(true)
+            setStatus('idle')
+            return
+          }
+        }
+      }
+
       const cappedLimit =
         typeof limit === 'number' ? Math.max(1, Math.min(limit, 500)) : 200
       const params = new URLSearchParams({
@@ -242,6 +264,17 @@ export function AnalyzePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId, status, totalBatches])
 
+  useEffect(() => {
+    if (!showExistingModal) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleCloseModal()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [showExistingModal])
+
   const startSmoothing = () => {
     stopSmoothing()
     const tick = () => {
@@ -313,6 +346,25 @@ export function AnalyzePage() {
     }
   }
 
+  const handleFetchExisting = async () => {
+    if (!pendingUsername) return
+    setShowExistingModal(false)
+    await fetchErrors(pendingUsername)
+    setStatus('completed')
+    setProgress(100)
+  }
+
+  const handleRunNew = async () => {
+    if (!pendingUsername) return
+    setShowExistingModal(false)
+    await startAnalysis(new Event('submit') as unknown as FormEvent, pendingUsername)
+  }
+
+  const handleCloseModal = () => {
+    setShowExistingModal(false)
+    setPendingUsername(null)
+  }
+
   return (
     <main className="page">
       <section className="hero">
@@ -357,6 +409,37 @@ export function AnalyzePage() {
       <AnalysisStatus status={status} progress={progress} error={error} />
       {(status === 'completed' || errorsLoading || errorsError || errorsData) && (
         <ErrorsList data={errorsData} isLoading={errorsLoading} error={errorsError} />
+      )}
+
+      {showExistingModal && (
+        <div
+          className="modal-overlay"
+          role="presentation"
+          onClick={handleCloseModal}
+        >
+          <div
+            className="modal panel"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="headline" style={{ fontSize: 22 }}>
+              Existing analysis found
+            </div>
+            <p className="summary">
+              {existingCount} games are already ingested for {pendingUsername}. Would you like to
+              fetch the existing analysis or run a new analysis?
+            </p>
+            <div className="controls modal-actions" style={{ justifyContent: 'flex-end' }}>
+              <button className="button button--ghost" type="button" onClick={handleFetchExisting}>
+                Fetch existing analysis
+              </button>
+              <button className="button" type="button" onClick={handleRunNew}>
+                Run new analysis
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   )

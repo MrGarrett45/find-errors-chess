@@ -295,6 +295,30 @@ func GetErrorPositions(c *gin.Context) {
 	})
 }
 
+// GetGamesCount returns a count of stored games for a user.
+func GetGamesCount(c *gin.Context) {
+	username := strings.ToLower(c.Param("username"))
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing username"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	count, err := CountGames(ctx, username)
+	if err != nil {
+		log.Printf("count games failed for %s: %v", username, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count games"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"username": username,
+		"count":    count,
+	})
+}
+
 // GetJobStatus returns status and batch progress for a job.
 func GetJobStatus(c *gin.Context) {
 	jobID := c.Param("jobid")
