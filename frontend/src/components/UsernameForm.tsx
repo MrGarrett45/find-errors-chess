@@ -4,6 +4,8 @@ import { EngineSettingsForm } from './EngineSettingsForm'
 type UsernameFormProps = {
   username: string
   onUsernameChange: (value: string) => void
+  provider: 'chesscom' | 'lichess'
+  onProviderChange: (value: 'chesscom' | 'lichess') => void
   months: number
   onMonthsChange: (value: number) => void
   limit: number | ''
@@ -23,6 +25,8 @@ type UsernameFormProps = {
 export function UsernameForm({
   username,
   onUsernameChange,
+  provider,
+  onProviderChange,
   months,
   onMonthsChange,
   limit,
@@ -58,10 +62,22 @@ export function UsernameForm({
   return (
     <form className="panel input-group" onSubmit={onSubmit} aria-label="Start analysis">
       <div className="label-row">
-        <label htmlFor="username" className="label">
-          Chess.com username
-        </label>
-        <span className="meta">e.g., hikaru</span>
+        <div className="pill-row">
+          <button
+            type="button"
+            className={`pill pill-button ${provider === 'chesscom' ? 'pill-active' : ''}`}
+            onClick={() => onProviderChange('chesscom')}
+          >
+            Chess.com
+          </button>
+          <button
+            type="button"
+            className={`pill pill-button ${provider === 'lichess' ? 'pill-active' : ''}`}
+            onClick={() => onProviderChange('lichess')}
+          >
+            Lichess
+          </button>
+        </div>
       </div>
       <input
         id="username"

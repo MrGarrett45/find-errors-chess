@@ -1,4 +1,4 @@
-import type { ChangeEvent } from 'react'
+import { useEffect, useState, type ChangeEvent } from 'react'
 
 type EngineSettingsFormProps = {
   engineDepth: number | ''
@@ -19,6 +19,25 @@ export function EngineSettingsForm({
   onEngineUseDepthChange,
   isDisabled,
 }: EngineSettingsFormProps) {
+  const [depthInput, setDepthInput] = useState(engineDepth === '' ? '' : String(engineDepth))
+  const [moveTimeInput, setMoveTimeInput] = useState(
+    engineMoveTime === '' ? '' : String(engineMoveTime),
+  )
+
+  useEffect(() => {
+    const next = engineDepth === '' ? '' : String(engineDepth)
+    if (next !== depthInput) {
+      setDepthInput(next)
+    }
+  }, [engineDepth, depthInput])
+
+  useEffect(() => {
+    const next = engineMoveTime === '' ? '' : String(engineMoveTime)
+    if (next !== moveTimeInput) {
+      setMoveTimeInput(next)
+    }
+  }, [engineMoveTime, moveTimeInput])
+
   const setMode = (useDepth: boolean) => {
     onEngineUseDepthChange(useDepth)
     if (useDepth) {
@@ -29,25 +48,45 @@ export function EngineSettingsForm({
   }
 
   const handleDepth = (e: ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    if (val === '') {
-      onEngineDepthChange('')
-      return
-    }
-    const num = Number(val)
-    const clamped = Math.min(20, Math.max(8, num))
-    onEngineDepthChange(Number.isFinite(clamped) ? clamped : '')
+    const next = e.target.value
+    if (!/^\d*$/.test(next)) return
+    setDepthInput(next)
   }
 
   const handleMoveTime = (e: ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    if (val === '') {
+    const next = e.target.value
+    if (!/^\d*$/.test(next)) return
+    setMoveTimeInput(next)
+  }
+
+  const commitDepth = () => {
+    if (depthInput === '') {
+      onEngineDepthChange('')
+      return
+    }
+    const num = Number(depthInput)
+    if (Number.isNaN(num)) {
+      setDepthInput(engineDepth === '' ? '' : String(engineDepth))
+      return
+    }
+    const clamped = Math.min(20, Math.max(8, num))
+    setDepthInput(String(clamped))
+    onEngineDepthChange(clamped)
+  }
+
+  const commitMoveTime = () => {
+    if (moveTimeInput === '') {
       onEngineMoveTimeChange('')
       return
     }
-    const num = Number(val)
+    const num = Number(moveTimeInput)
+    if (Number.isNaN(num)) {
+      setMoveTimeInput(engineMoveTime === '' ? '' : String(engineMoveTime))
+      return
+    }
     const clamped = Math.min(1000, Math.max(25, num))
-    onEngineMoveTimeChange(Number.isFinite(clamped) ? clamped : '')
+    setMoveTimeInput(String(clamped))
+    onEngineMoveTimeChange(clamped)
   }
 
   return (
@@ -79,11 +118,18 @@ export function EngineSettingsForm({
           <input
             id="engine-movetime"
             className="input"
-            type="number"
+            type="text"
+            inputMode="numeric"
             min={25}
             max={1000}
-            value={engineMoveTime}
+            value={moveTimeInput}
             onChange={handleMoveTime}
+            onBlur={commitMoveTime}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                ;(e.currentTarget as HTMLInputElement).blur()
+              }
+            }}
             style={{ width: '140px' }}
             required
             disabled={isDisabled}
@@ -97,11 +143,18 @@ export function EngineSettingsForm({
           <input
             id="engine-depth"
             className="input"
-            type="number"
+            type="text"
+            inputMode="numeric"
             min={8}
             max={20}
-            value={engineDepth}
+            value={depthInput}
             onChange={handleDepth}
+            onBlur={commitDepth}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                ;(e.currentTarget as HTMLInputElement).blur()
+              }
+            }}
             style={{ width: '120px' }}
             required
             disabled={isDisabled}

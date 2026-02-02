@@ -1,15 +1,17 @@
 package app
 
 import (
+	"bufio"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
-	"strconv"
-
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -54,57 +56,82 @@ func GetChessGames(c *gin.Context) {
 		}
 	}
 
+	// Optional: limit games to save/process
+	limit := 0
+	if q := c.Query("limit"); q != "" {
+		if v, err := parsePositiveInt(q); err == nil && v > 0 {
+			limit = v
+		}
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 25*time.Second)
 	defer cancel()
 
-	archives, err := fetchArchives(ctx, username)
-	if err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, errUserNotFound) {
-			status = http.StatusNotFound
-		}
-		c.JSON(status, gin.H{"error": err.Error()})
-		return
-	}
-	if len(archives) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"username": username,
-			"count":    0,
-		})
-		return
-	}
-
-	// Take last N months (archives are chronological)
-	start := len(archives) - months
-	if start < 0 {
-		start = 0
-	}
-	target := archives[start:]
-
 	var out []models.GameLite
-	for i := len(target) - 1; i >= 0; i-- { // newest first
-		monthURL := target[i]
-		mg, err := fetchMonthly(ctx, monthURL)
+	provider := strings.ToLower(strings.TrimSpace(c.Query("provider")))
+	if provider == "lichess" {
+		lichessGames, err := fetchLichessGames(ctx, username, months, limit)
 		if err != nil {
-			// soft-fail a month; you could also collect and return partial errors
-			continue
+			status := http.StatusInternalServerError
+			if errors.Is(err, errUserNotFound) {
+				status = http.StatusNotFound
+			}
+			c.JSON(status, gin.H{"error": err.Error()})
+			return
 		}
-		for _, g := range mg.Games {
-			color, opp, oppRating, result := derivePOV(username, g)
-			eco := NormalizeECO(g.ECO)
-			out = append(out, models.GameLite{
-				URL:         g.URL,
-				When:        g.EndTime,
-				Color:       color,
-				Opponent:    opp,
-				OppRating:   oppRating,
-				Result:      result,
-				Rated:       g.Rated,
-				TimeClass:   g.TimeClass,
-				TimeControl: g.TimeControl,
-				PGN:         g.PGN,
-				ECO:         eco,
+		out = lichessGames
+	} else {
+		archives, err := fetchArchives(ctx, username)
+		if err != nil {
+			status := http.StatusInternalServerError
+			if errors.Is(err, errUserNotFound) {
+				status = http.StatusNotFound
+			}
+			c.JSON(status, gin.H{"error": err.Error()})
+			return
+		}
+		if len(archives) == 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"username": username,
+				"count":    0,
 			})
+			return
+		}
+
+		// Take last N months (archives are chronological)
+		start := len(archives) - months
+		if start < 0 {
+			start = 0
+		}
+		target := archives[start:]
+
+		for i := len(target) - 1; i >= 0; i-- { // newest first
+			monthURL := target[i]
+			mg, err := fetchMonthly(ctx, monthURL)
+			if err != nil {
+				// soft-fail a month; you could also collect and return partial errors
+				continue
+			}
+			for _, g := range mg.Games {
+				color, opp, oppRating, result := derivePOV(username, g)
+				eco := NormalizeECO(g.ECO)
+				out = append(out, models.GameLite{
+					URL:         g.URL,
+					When:        g.EndTime,
+					Color:       color,
+					Opponent:    opp,
+					OppRating:   oppRating,
+					Result:      result,
+					Rated:       g.Rated,
+					TimeClass:   g.TimeClass,
+					TimeControl: g.TimeControl,
+					PGN:         g.PGN,
+					ECO:         eco,
+				})
+			}
 		}
 	}
 
@@ -141,16 +168,6 @@ func GetChessGames(c *gin.Context) {
 		}
 	}
 
-	// How many games do we keep/save from this endpoint?
-	limit := 0
-	if q := c.Query("limit"); q != "" {
-		if v, err := parsePositiveInt(q); err == nil && v > 0 {
-			limit = v
-		}
-	}
-	if limit > 1000 {
-		limit = 1000
-	}
 	if limit <= 0 || limit > len(out) {
 		limit = len(out)
 	}
@@ -268,6 +285,139 @@ func GetChessGames(c *gin.Context) {
 		"job_id":   jobID,
 		"batches":  totalBatches,
 	})
+}
+
+func fetchLichessGames(ctx context.Context, username string, months, maxGames int) ([]models.GameLite, error) {
+	base := fmt.Sprintf("https://lichess.org/api/games/user/%s", url.PathEscape(username))
+	params := url.Values{}
+	params.Set("pgnInJson", "true")
+	params.Set("moves", "true")
+	params.Set("tags", "true")
+	params.Set("opening", "true")
+	params.Set("clocks", "true")
+	params.Set("sort", "dateDesc")
+	since := time.Now().AddDate(0, -months, 0).UnixMilli()
+	params.Set("since", strconv.FormatInt(since, 10))
+	if maxGames > 0 {
+		params.Set("max", strconv.Itoa(maxGames))
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"?"+params.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/x-ndjson")
+
+	res, err := httpc.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusNotFound {
+		return nil, errUserNotFound
+	}
+	if res.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(res.Body, 2048))
+		return nil, fmt.Errorf("lichess api error: %s", strings.TrimSpace(string(body)))
+	}
+
+	scanner := bufio.NewScanner(res.Body)
+	scanner.Buffer(make([]byte, 0, 1024*1024), 2*1024*1024)
+
+	var out []models.GameLite
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var g models.LichessGame
+		if err := json.Unmarshal(line, &g); err != nil {
+			continue
+		}
+		game, ok := mapLichessGame(username, g)
+		if ok {
+			out = append(out, game)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func mapLichessGame(username string, g models.LichessGame) (models.GameLite, bool) {
+	user := strings.ToLower(username)
+	whiteName := lichessPlayerName(g.Players.White)
+	blackName := lichessPlayerName(g.Players.Black)
+	if whiteName == "" || blackName == "" {
+		return models.GameLite{}, false
+	}
+
+	color := "black"
+	opponent := whiteName
+	oppRating := g.Players.White.Rating
+	if strings.ToLower(whiteName) == user {
+		color = "white"
+		opponent = blackName
+		oppRating = g.Players.Black.Rating
+	}
+
+	whenMs := g.LastMoveAt
+	if whenMs == 0 {
+		whenMs = g.CreatedAt
+	}
+	whenUnix := whenMs / 1000
+
+	timeClass := g.Speed
+	if timeClass == "" {
+		timeClass = g.Perf
+	}
+
+	timeControl := ""
+	if g.Clock != nil {
+		timeControl = fmt.Sprintf("%d+%d", g.Clock.Initial, g.Clock.Increment)
+	}
+
+	eco := ""
+	if g.Opening != nil {
+		if g.Opening.Name != "" {
+			eco = g.Opening.Name
+		} else {
+			eco = g.Opening.ECO
+		}
+	}
+
+	return models.GameLite{
+		URL:         fmt.Sprintf("https://lichess.org/%s", g.ID),
+		When:        whenUnix,
+		Color:       color,
+		Opponent:    opponent,
+		OppRating:   oppRating,
+		Result:      lichessResultForUser(g.Winner, color),
+		Rated:       g.Rated,
+		TimeClass:   timeClass,
+		TimeControl: timeControl,
+		PGN:         g.PGN,
+		ECO:         eco,
+	}, true
+}
+
+func lichessPlayerName(p models.LichessPlayer) string {
+	if p.User != nil && p.User.Name != "" {
+		return p.User.Name
+	}
+	return p.Name
+}
+
+func lichessResultForUser(winner string, color string) string {
+	if winner == "" {
+		return "draw"
+	}
+	if (winner == "white" && color == "white") || (winner == "black" && color == "black") {
+		return "win"
+	}
+	return "loss"
 }
 
 // GetErrorPositions returns a slice of error positions for the given user.

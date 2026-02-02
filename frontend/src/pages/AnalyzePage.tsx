@@ -24,6 +24,7 @@ export function AnalyzePage() {
   const [engineDepth, setEngineDepth] = useState<number | ''>(14)
   const [engineMoveTime, setEngineMoveTime] = useState<number | ''>(50)
   const [engineUseDepth, setEngineUseDepth] = useState(false)
+  const [provider, setProvider] = useState<'chesscom' | 'lichess'>('chesscom')
   const [errorsData, setErrorsData] = useState<ErrorsResponse | null>(null)
   const [errorsLoading, setErrorsLoading] = useState(false)
   const [errorsError, setErrorsError] = useState<string | null>(null)
@@ -117,11 +118,11 @@ export function AnalyzePage() {
 
     try {
       if (!overrideUser) {
-        const countRes = await authFetch(
-          `${API_BASE}/games/count/${encodeURIComponent(user)}`,
-          undefined,
-          getAccessTokenSilently,
-        )
+      const countRes = await authFetch(
+        `${API_BASE}/games/count/${encodeURIComponent(user)}`,
+        undefined,
+        getAccessTokenSilently,
+      )
         if (countRes.ok) {
           const countBody = await countRes.json()
           const countVal = Number(countBody?.count ?? 0)
@@ -143,6 +144,7 @@ export function AnalyzePage() {
         engine_depth: String(depthVal),
         engine_move_time: String(moveTimeVal),
         engine_depth_or_time: String(engineUseDepth),
+        ...(provider === 'lichess' ? { provider: 'lichess' } : {}),
       })
       const res = await authFetch(
         `${API_BASE}/chessgames/${encodeURIComponent(user)}?${params.toString()}`,
@@ -389,6 +391,8 @@ export function AnalyzePage() {
         <UsernameForm
           username={username}
           onUsernameChange={setUsername}
+          provider={provider}
+          onProviderChange={setProvider}
           months={months}
           onMonthsChange={setMonths}
           limit={limit}
