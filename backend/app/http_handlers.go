@@ -202,8 +202,12 @@ func GetChessGames(c *gin.Context) {
 		batchSize = 100 // sane fallback
 	}
 
-	totalGames := limit
-	totalBatches := (totalGames + batchSize - 1) / batchSize // ceil division
+	totalBatches := (limit + batchSize - 1) / batchSize // ceil division
+
+	//set batch size to limit if its under the batch size (i.e. if limit = 50 and batch size is 100 we want to send over 50)
+	if limit < batchSize {
+		batchSize = limit
+	}
 
 	// Record that a job has begun
 	user, err := getUserByAuth0Sub(ctx, claims.Subject)
@@ -219,7 +223,7 @@ func GetChessGames(c *gin.Context) {
 		}
 	}
 
-	jobID, err := CreateJob(ctx, username, user.ID, totalGames, batchSize, totalBatches)
+	jobID, err := CreateJob(ctx, username, user.ID, limit, batchSize, totalBatches)
 	if err != nil {
 		log.Printf("failed to create job for user=%s: %v", username, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to begin analysis"})
